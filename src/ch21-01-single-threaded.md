@@ -1,14 +1,14 @@
 ## بناء خادوم ويب أحادي الخيط (Building a Single-Threaded Web Server)
 
-سنبدأ (we'll start) بتشغيل (by getting working) خادوم ويب (web server) أحادي الخيط (single-threaded). قبل أن نبدأ (before we begin)، دعونا نلقي (let's look at) نظرة سريعة (a quick overview) على البروتوكولات (protocols) المستخدمة (involved) في بناء (in building) خوادم الويب (web servers). تفاصيل (the details of) هذه البروتوكولات (these protocols) خارج نطاق (are beyond the scope of) هذا الكتاب (this book)، ولكن (but) نظرة عامة موجزة (a brief overview) ستعطيك (will give you) المعلومات (the information) التي تحتاجها (you need).
+سنبدأ بتشغيل خادوم ويب (web server) أحادي الخيط (single-threaded). قبل أن نبدأ، دعونا نلقي نظرة سريعة على البروتوكولات (protocols) المستخدمة في بناء خوادم الويب (web servers). تفاصيل هذه البروتوكولات (protocols) خارج نطاق هذا الكتاب، ولكن نظرة عامة موجزة ستعطيك المعلومات التي تحتاجها.
 
-البروتوكولان الرئيسيان (the two main protocols) المستخدمان (involved) في خوادم الويب (in web servers) هما (are) _Hypertext Transfer Protocol_ _(HTTP)_ و (and) _Transmission Control Protocol_ _(TCP)_. كلا البروتوكولين (both protocols) هما (are) بروتوكولا (protocols) _request-response_ طلب-استجابة (request-response)، مما يعني (meaning) أن (that) _client_ (عميل) (a client) يبدأ (initiates) الطلبات (requests) و (and) _server_ (خادوم) (a server) يستمع (listens) للطلبات (to the requests) ويوفر (and provides) استجابة (a response) للعميل (to the client). محتويات (the contents of) تلك الطلبات والاستجابات (those requests and responses) محددة (are defined) بواسطة البروتوكولات (by the protocols).
+البروتوكولان الرئيسيان المستخدمان في خوادم الويب (web servers) هما _Hypertext Transfer Protocol_ _(HTTP)_ و _Transmission Control Protocol_ _(TCP)_. كلا البروتوكولين (protocols) هما بروتوكولا (protocols) _request-response_ طلب-استجابة (request-response)، مما يعني أن _client_ (عميل) (client) يبدأ الطلبات (requests) و _server_ (خادوم) (server) يستمع للطلبات (requests) ويوفر استجابة (response) للعميل (client). محتويات تلك الطلبات (requests) والاستجابات (responses) محددة بواسطة البروتوكولات (protocols).
 
-TCP هو (is) البروتوكول (the protocol) ذو المستوى الأدنى (the lower-level) الذي يصف (that describes) تفاصيل (the details of) كيفية (how) انتقال (gets) المعلومات (information) من خادوم (from one server) إلى آخر (to another) ولكنه (but) لا يحدد (doesn't specify) ما هي (what) تلك المعلومات (that information is). يبني (builds) HTTP على (on top of) TCP من خلال (by) تحديد (defining) محتويات (the contents of) الطلبات والاستجابات (the requests and responses). من الممكن تقنيًا (it's technically possible) استخدام (to use) HTTP مع (with) بروتوكولات أخرى (other protocols)، ولكن (but) في الغالبية العظمى (in the vast majority) من الحالات (of cases)، يرسل (sends) HTTP بياناته (its data) عبر (over) TCP. سنعمل (we'll work) مع (with) البايتات الخام (the raw bytes) لطلبات واستجابات (of TCP and HTTP requests and responses) TCP و HTTP.
+TCP هو البروتوكول (protocol) ذو المستوى الأدنى (lower-level) الذي يصف تفاصيل كيفية انتقال المعلومات من خادوم (server) إلى آخر ولكنه لا يحدد ما هي تلك المعلومات. يبني HTTP على TCP من خلال تحديد محتويات الطلبات (requests) والاستجابات (responses). من الممكن تقنيًا استخدام HTTP مع بروتوكولات (protocols) أخرى، ولكن في الغالبية العظمى من الحالات، يرسل HTTP بياناته عبر TCP. سنعمل مع البايتات (bytes) الخام لطلبات (requests) واستجابات (responses) TCP و HTTP.
 
 ### الاستماع لاتصال TCP (Listening to the TCP Connection)
 
-يحتاج (needs) خادوم الويب الخاص بنا (our web server) إلى (to) الاستماع (listening) لاتصال (to a TCP connection) TCP، لذا (so) فهذا هو (that's) الجزء الأول (the first part) الذي سنعمل عليه (we'll work on). توفر (provides) المكتبة القياسية (the standard library) وحدة (a module) `std::net` تتيح لنا (that lets us) القيام بذلك (do this). لنصنع (let's make) مشروعًا جديدًا (a new project) بالطريقة المعتادة (in the usual way):
+يحتاج خادوم الويب (web server) الخاص بنا إلى الاستماع لاتصال (connection) TCP، لذا فهذا هو الجزء الأول الذي سنعمل عليه. توفر المكتبة القياسية (standard library) وحدة (module) `std::net` تتيح لنا القيام بذلك. لنصنع مشروعًا جديدًا بالطريقة المعتادة:
 
 ```console
 $ cargo new hello
@@ -16,9 +16,9 @@ $ cargo new hello
 $ cd hello
 ```
 
-الآن (now) أدخل (enter) الكود (the code) في القائمة (in Listing) 21-1 في (in) _src/main.rs_ للبدء (to start). سيستمع (will listen) هذا الكود (this code) عند العنوان المحلي (at the local address) `127.0.0.1:7878` للتدفقات الواردة (for incoming TCP streams) incoming TCP streams. عندما (when) يحصل على (it gets) تدفق وارد (an incoming stream)، سيطبع (it will print) `Connection established!`.
+الآن أدخل الكود (code) في القائمة (Listing) 21-1 في _src/main.rs_ للبدء. سيستمع هذا الكود (code) عند العنوان المحلي (local address) `127.0.0.1:7878` للتدفقات (streams) الواردة TCP. عندما يحصل على تدفق (stream) وارد، سيطبع `Connection established!`.
 
-<Listing number="21-1" file-name="src/main.rs" caption="الاستماع (listening) للتدفقات الواردة (for incoming streams) وطباعة (and printing) رسالة (a message) عندما (when) نستقبل (we receive) تدفقًا (a stream)">
+<Listing number="21-1" file-name="src/main.rs" caption="الاستماع للتدفقات (streams) الواردة وطباعة رسالة عندما نستقبل تدفقًا (stream)">
 
 ```rust,no_run
 {{#rustdoc_include ../listings/ch21-web-server/listing-21-01/src/main.rs}}
@@ -26,17 +26,17 @@ $ cd hello
 
 </Listing>
 
-باستخدام (using) `TcpListener`، يمكننا (we can) الاستماع (listen) لاتصالات (for TCP connections) TCP على العنوان (at the address) `127.0.0.1:7878`. في العنوان (in the address)، القسم (the section) قبل النقطتين (before the colon) هو (is) عنوان (an IP address) IP يمثل (representing) جهاز الكمبيوتر الخاص بك (your computer) (هذا هو نفسه (this is the same) على كل جهاز كمبيوتر (on every computer) ولا يمثل (and doesn't represent) كمبيوتر المؤلفين (the authors' computer) بشكل خاص (specifically))، و (and) `7878` هو (is) المنفذ (the port). اخترنا (we chose) هذا المنفذ (this port) لسببين (for two reasons): لا يتم قبول (is not normally accepted) HTTP عادة (normally) على هذا المنفذ (on this port)، لذا (so) فإن (that) خادومنا (our server) من غير المحتمل (is unlikely) أن يتعارض (to conflict) مع (with) أي خادوم ويب آخر (any other web server) قد يكون لديك (you might have) قيد التشغيل (running) على جهازك (on your machine)، و (and) 7878 هو (is) _rust_ مكتوبة (typed) على الهاتف (on a telephone).
+باستخدام `TcpListener`، يمكننا الاستماع لاتصالات (connections) TCP على العنوان (address) `127.0.0.1:7878`. في العنوان (address)، القسم قبل النقطتين هو عنوان (IP address) IP يمثل جهاز الكمبيوتر الخاص بك (هذا هو نفسه على كل جهاز كمبيوتر ولا يمثل كمبيوتر المؤلفين بشكل خاص)، و `7878` هو المنفذ (port). اخترنا هذا المنفذ (port) لسببين: لا يتم قبول HTTP عادة على هذا المنفذ (port)، لذا فإن خادومنا (server) من غير المحتمل أن يتعارض مع أي خادوم ويب (web server) آخر قد يكون لديك قيد التشغيل على جهازك، و 7878 هو _rust_ مكتوبة على الهاتف.
 
-تعمل (works) دالة (the function) `bind` في هذا السيناريو (in this scenario) مثل (like) دالة (the function) `new` من حيث (in that) أنها (it) ستُرجع (will return) نسخة جديدة (a new instance) من (of) `TcpListener`. تُسمى (is called) الدالة (the function) `bind` لأنه (because)، في الشبكات (in networking)، الاتصال بمنفذ (connecting to a port) للاستماع (to listen to) يُعرف باسم (is known as) "binding to a port" (ربط بمنفذ) (binding to a port).
+تعمل دالة (function) `bind` في هذا السيناريو (scenario) مثل دالة (function) `new` من حيث أنها ستُرجع نسخة (instance) جديدة من `TcpListener`. تُسمى الدالة (function) `bind` لأنه، في الشبكات (networking)، الاتصال بمنفذ (port) للاستماع يُعرف باسم "binding to a port" (ربط بمنفذ) (binding to a port).
 
-تُرجع (returns) دالة (the function) `bind` نتيجة (a Result) `Result<T, E>`، مما يشير إلى (which indicates) أنه (that) من الممكن (it's possible) أن يفشل (that binding could fail) الربط (binding)، على سبيل المثال (for example)، إذا (if) قمنا بتشغيل (we ran) نسختين (two instances) من برنامجنا (of our program) وبالتالي (and thus) كان لدينا (we had) برنامجان (two programs) يستمعان (listening) إلى نفس المنفذ (to the same port). نظرًا لأننا (because we're) نكتب (writing) خادومًا أساسيًا (a basic server) فقط (only) لأغراض التعلم (for learning purposes)، فلن نقلق (we won't worry) بشأن (about) معالجة (handling) هذه الأنواع (these kinds) من الأخطاء (of errors)؛ بدلاً من ذلك (instead)، نستخدم (we use) `unwrap` لإيقاف (to stop) البرنامج (the program) إذا (if) حدثت (occur) أخطاء (errors).
+تُرجع دالة (function) `bind` نتيجة `Result<T, E>`، مما يشير إلى أنه من الممكن أن يفشل الربط (binding)، على سبيل المثال، إذا قمنا بتشغيل نسختين (instances) من برنامجنا وبالتالي كان لدينا برنامجان يستمعان إلى نفس المنفذ (port). نظرًا لأننا نكتب خادومًا (server) أساسيًا فقط لأغراض التعلم، فلن نقلق بشأن معالجة هذه الأنواع من الأخطاء؛ بدلاً من ذلك، نستخدم `unwrap` لإيقاف البرنامج إذا حدثت أخطاء.
 
-تُرجع (returns) الطريقة (the method) `incoming` على (on) `TcpListener` مُكرِّرًا (an iterator) يعطينا (that gives us) تسلسلاً (a sequence) من التدفقات (of streams) (بشكل أكثر تحديدًا (more specifically)، تدفقات (streams) من نوع (of type) `TcpStream`). _stream_ (تدفق) (a single stream) واحد (one) يمثل (represents) اتصالاً مفتوحًا (an open connection) بين العميل والخادوم (between the client and the server). _Connection_ (اتصال) (a connection) هو (is) الاسم (the name) لعملية (for the process of) الطلب والاستجابة (the request and response) الكاملة (the full) التي (in which) يتصل فيها (connects) العميل (a client) بالخادوم (to the server)، ويولد (generates) الخادوم (the server) استجابة (a response)، ويغلق (and closes) الخادوم (the server) الاتصال (the connection). على هذا النحو (as such)، سنقرأ (we'll read) من (from) `TcpStream` لنرى (to see) ما (what) أرسله (sent) العميل (the client) ثم (then) نكتب (write) استجابتنا (our response) إلى التدفق (to the stream) لإرسال (to send) البيانات (the data) مرة أخرى (back) إلى العميل (to the client). بشكل عام (overall)، ستعالج (will handle) حلقة (this for loop) `for` هذه (this) كل اتصال (each connection) بدوره (in turn) وتنتج (and produce) سلسلة (a series) من التدفقات (of streams) لنتعامل معها (for us to handle).
+تُرجع الطريقة (method) `incoming` على `TcpListener` مُكرِّرًا (iterator) يعطينا تسلسلاً من التدفقات (streams) (بشكل أكثر تحديدًا، تدفقات (streams) من نوع `TcpStream`). _stream_ (تدفق) (stream) واحد يمثل اتصالاً (connection) مفتوحًا بين العميل (client) والخادوم (server). _Connection_ (اتصال) (connection) هو الاسم لعملية الطلب (request) والاستجابة (response) الكاملة التي يتصل فيها العميل (client) بالخادوم (server)، ويولد الخادوم (server) استجابة (response)، ويغلق الخادوم (server) الاتصال (connection). على هذا النحو، سنقرأ من `TcpStream` لنرى ما أرسله العميل (client) ثم نكتب استجابتنا (response) إلى التدفق (stream) لإرسال البيانات (data) مرة أخرى إلى العميل (client). بشكل عام، ستعالج حلقة `for` هذه كل اتصال (connection) بدوره وتنتج سلسلة من التدفقات (streams) لنتعامل معها.
 
-في الوقت الحالي (for now)، تتكون (consists of) معالجتنا (our handling) للتدفق (of the stream) من (of) استدعاء (calling) `unwrap` لإنهاء (to terminate) برنامجنا (our program) إذا (if) كان للتدفق (the stream has) أي أخطاء (any errors)؛ إذا (if) لم تكن هناك (there are no) أخطاء (errors)، يطبع (prints) البرنامج (the program) رسالة (a message). سنضيف (we'll add) المزيد (more) من الوظائف (functionality) لحالة النجاح (for the success case) في القائمة التالية (in the next listing). السبب في (the reason why) أننا (we) قد نتلقى (might receive) أخطاء (errors) من (from) طريقة (the method) `incoming` عندما (when) يتصل (connects) عميل (a client) بالخادوم (to the server) هو (is) أننا (that we're) لا نكرر (not actually iterating) فعليًا (actually) على الاتصالات (over connections). بدلاً من ذلك (instead)، نكرر (we're iterating) على (over) _محاولات اتصال_ (connection attempts). قد لا يكون (might not be) الاتصال (the connection) ناجحًا (successful) لعدة أسباب (for a number of reasons)، الكثير منها (many of them) خاص (are specific) بنظام التشغيل (to the operating system). على سبيل المثال (for example)، للعديد (many) من أنظمة التشغيل (operating systems) حد (have a limit) لعدد (to the number of) الاتصالات المفتوحة المتزامنة (simultaneous open connections) التي يمكنها (they can) دعمها (support)؛ ستنتج (will produce) محاولات الاتصال الجديدة (new connection attempts) التي تتجاوز (that go beyond) هذا العدد (that number) خطأ (an error) حتى (until) يتم إغلاق (are closed) بعض (some of) الاتصالات المفتوحة (the open connections).
+في الوقت الحالي، تتكون معالجتنا للتدفق (stream) من استدعاء `unwrap` لإنهاء برنامجنا إذا كان للتدفق (stream) أي أخطاء؛ إذا لم تكن هناك أخطاء، يطبع البرنامج رسالة. سنضيف المزيد من الوظائف (functionality) لحالة النجاح في القائمة (listing) التالية. السبب في أننا قد نتلقى أخطاء من طريقة (method) `incoming` عندما يتصل عميل (client) بالخادوم (server) هو أننا لا نكرر فعليًا على الاتصالات (connections). بدلاً من ذلك، نكرر على _محاولات اتصال_ (connection attempts). قد لا يكون الاتصال (connection) ناجحًا لعدة أسباب، الكثير منها خاص بنظام التشغيل (operating system). على سبيل المثال، للعديد من أنظمة التشغيل (operating systems) حد لعدد الاتصالات (connections) المفتوحة المتزامنة التي يمكنها دعمها؛ ستنتج محاولات الاتصال (connection attempts) الجديدة التي تتجاوز هذا العدد خطأ حتى يتم إغلاق بعض الاتصالات (connections) المفتوحة.
 
-لنحاول (let's try) تشغيل (running) هذا الكود (this code)! استدعِ (invoke) `cargo run` في الطرفية (in the terminal)، ثم (then) قم بتحميل (load) _127.0.0.1:7878_ في (in) متصفح الويب (a web browser). يجب (should) أن يعرض (display) المتصفح (the browser) رسالة خطأ (an error message) مثل (like) "Connection reset" لأن (because) الخادوم (the server) لا يرسل (isn't currently sending) حاليًا (currently) أي بيانات (any data). ولكن (but) عندما (when) تنظر (you look) إلى (at) طرفيتك (your terminal)، يجب (should) أن ترى (see) عدة رسائل (several messages) تمت طباعتها (printed) عندما (when) اتصل (connected) المتصفح (the browser) بالخادوم (to the server)!
+لنحاول تشغيل هذا الكود (code)! استدعِ `cargo run` في الطرفية (terminal)، ثم قم بتحميل _127.0.0.1:7878_ في متصفح الويب (web browser). يجب أن يعرض المتصفح (browser) رسالة خطأ مثل "Connection reset" لأن الخادوم (server) لا يرسل حاليًا أي بيانات (data). ولكن عندما تنظر إلى طرفيتك (terminal)، يجب أن ترى عدة رسائل تمت طباعتها عندما اتصل المتصفح (browser) بالخادوم (server)!
 
 ```text
      Running `target/debug/hello`
@@ -45,21 +45,21 @@ Connection established!
 Connection established!
 ```
 
-في بعض الأحيان (sometimes) سترى (you'll see) رسائل متعددة (multiple messages) مطبوعة (printed) لطلب (for one browser request) متصفح (browser) واحد (one)؛ قد يكون السبب (the reason might be) هو أن (that) المتصفح (the browser) يقدم (is making) طلبًا (a request) للصفحة (for the page) بالإضافة إلى (as well as) طلب (a request) لموارد أخرى (for other resources)، مثل (such as) أيقونة (the icon) _favicon.ico_ التي تظهر (that appears) في علامة تبويب (in the browser tab) المتصفح (browser).
+في بعض الأحيان سترى رسائل متعددة مطبوعة لطلب (request) متصفح (browser) واحد؛ قد يكون السبب هو أن المتصفح (browser) يقدم طلبًا (request) للصفحة بالإضافة إلى طلب (request) لموارد أخرى، مثل أيقونة _favicon.ico_ التي تظهر في علامة تبويب (tab) المتصفح (browser).
 
-قد يكون أيضًا (it could also be) أن (that) المتصفح (the browser) يحاول (is trying) الاتصال (to connect) بالخادوم (to the server) عدة مرات (multiple times) لأن (because) الخادوم (the server) لا يستجيب (isn't responding) بأي بيانات (with any data). عندما (when) يخرج (goes out of) `stream` من النطاق (scope) ويتم إسقاطه (and gets dropped) في نهاية (at the end of) الحلقة (the loop)، يتم إغلاق (is closed) الاتصال (the connection) كجزء (as part) من (of) تطبيق (the drop implementation) `drop`. تتعامل (deal with) المتصفحات (browsers) أحيانًا (sometimes) مع (with) الاتصالات المغلقة (closed connections) عن طريق (by) إعادة المحاولة (retrying)، لأن (because) المشكلة (the problem) قد تكون (might be) مؤقتة (temporary).
+قد يكون أيضًا أن المتصفح (browser) يحاول الاتصال بالخادوم (server) عدة مرات لأن الخادوم (server) لا يستجيب بأي بيانات (data). عندما يخرج `stream` من النطاق (scope) ويتم إسقاطه في نهاية الحلقة (loop)، يتم إغلاق الاتصال (connection) كجزء من تطبيق (implementation) `drop`. تتعامل المتصفحات (browsers) أحيانًا مع الاتصالات (connections) المغلقة عن طريق إعادة المحاولة، لأن المشكلة قد تكون مؤقتة.
 
-تفتح (open) المتصفحات (browsers) أيضًا (also) في بعض الأحيان (sometimes) اتصالات متعددة (multiple connections) بالخادوم (to the server) دون (without) إرسال (sending) أي طلبات (any requests) بحيث (so that) إذا (if) أرسلت (they send) طلبات (requests) لاحقًا (later)، يمكن (can) أن تحدث (happen) هذه الطلبات (those requests) بشكل أسرع (faster). عندما (when) يحدث هذا (this happens)، سيرى (will see) خادومنا (our server) كل اتصال (every connection)، بغض النظر (regardless) عما إذا كانت (whether) هناك (there are) أي طلبات (any requests) عبر ذلك الاتصال (over that connection). تقوم (do) العديد (many) من إصدارات (versions of) المتصفحات المستندة إلى (browsers based on) Chrome بذلك (this)، على سبيل المثال (for example)؛ يمكنك (you can) تعطيل (disable) هذا التحسين (this optimization) باستخدام (by using) وضع التصفح الخاص (private browsing mode) أو (or) استخدام (using) متصفح مختلف (a different browser).
+تفتح المتصفحات (browsers) أيضًا في بعض الأحيان اتصالات (connections) متعددة بالخادوم (server) دون إرسال أي طلبات (requests) بحيث إذا أرسلت طلبات (requests) لاحقًا، يمكن أن تحدث هذه الطلبات (requests) بشكل أسرع. عندما يحدث هذا، سيرى خادومنا (server) كل اتصال (connection)، بغض النظر عما إذا كانت هناك أي طلبات (requests) عبر ذلك الاتصال (connection). تقوم العديد من إصدارات (versions) المتصفحات (browsers) المستندة إلى Chrome بذلك، على سبيل المثال؛ يمكنك تعطيل هذا التحسين (optimization) باستخدام وضع التصفح الخاص أو استخدام متصفح (browser) مختلف.
 
-العامل المهم (the important factor) هو (is) أننا (that we) نجحنا (succeeded) في الحصول على (in getting) مقبض (a handle) لاتصال (to a TCP connection) TCP!
+العامل المهم هو أننا نجحنا في الحصول على مقبض (handle) لاتصال (connection) TCP!
 
-تذكر (remember) إيقاف (to stop) البرنامج (the program) بالضغط على (by pressing) <kbd>ctrl</kbd>-<kbd>C</kbd> عندما (when) تنتهي (you're finished) من تشغيل (running) إصدار معين (a particular version) من الكود (of the code). ثم (then) أعد تشغيل (restart) البرنامج (the program) عن طريق (by) استدعاء (invoking) أمر (the command) `cargo run` بعد (after) إجراء (making) كل مجموعة (each set) من (of) تغييرات (code changes) الكود (code) للتأكد (to make sure) من أنك (you're) تشغل (running) أحدث كود (the newest code).
+تذكر إيقاف البرنامج بالضغط على <kbd>ctrl</kbd>-<kbd>C</kbd> عندما تنتهي من تشغيل إصدار معين من الكود (code). ثم أعد تشغيل البرنامج عن طريق استدعاء أمر (command) `cargo run` بعد إجراء كل مجموعة من تغييرات الكود (code) للتأكد من أنك تشغل أحدث كود (code).
 
 ### قراءة الطلب (Reading the Request)
 
-لنطبق (let's implement) الوظيفة (the functionality) لقراءة (for reading) الطلب (the request) من المتصفح (from the browser)! لفصل (to separate) المهام (the concerns) المتمثلة في (of) الحصول (first getting) أولاً (first) على اتصال (a connection) ثم (then) اتخاذ (taking) بعض الإجراءات (some action) مع الاتصال (with the connection)، سنبدأ (we'll start) دالة جديدة (a new function) لمعالجة (for processing) الاتصالات (connections). في (in) دالة (this new function) `handle_connection` الجديدة (new) هذه (this)، سنقرأ (we'll read) البيانات (the data) من (from) تدفق (the TCP stream) TCP ونطبعها (and print it) حتى (so) نتمكن (we can) من رؤية (see) البيانات المرسلة (the data being sent) من المتصفح (from the browser). غيّر (change) الكود (the code) ليبدو (to look) مثل (like) القائمة (Listing) 21-2.
+لنطبق الوظيفة (functionality) لقراءة الطلب (request) من المتصفح (browser)! لفصل المهام المتمثلة في الحصول أولاً على اتصال (connection) ثم اتخاذ بعض الإجراءات مع الاتصال (connection)، سنبدأ دالة (function) جديدة لمعالجة الاتصالات (connections). في دالة (function) `handle_connection` الجديدة هذه، سنقرأ البيانات (data) من تدفق (stream) TCP ونطبعها حتى نتمكن من رؤية البيانات (data) المرسلة من المتصفح (browser). غيّر الكود (code) ليبدو مثل القائمة (Listing) 21-2.
 
-<Listing number="21-2" file-name="src/main.rs" caption="القراءة (reading) من (from) `TcpStream` وطباعة (and printing) البيانات (the data)">
+<Listing number="21-2" file-name="src/main.rs" caption="القراءة من `TcpStream` وطباعة البيانات (data)">
 
 ```rust,no_run
 {{#rustdoc_include ../listings/ch21-web-server/listing-21-02/src/main.rs}}
@@ -67,17 +67,17 @@ Connection established!
 
 </Listing>
 
-نجلب (we bring) `std::io::BufReader` و (and) `std::io::prelude` إلى النطاق (into scope) للوصول إلى (to get access to) السمات (traits) والأنواع (and types) التي تتيح لنا (that let us) القراءة من (read from) والكتابة إلى (and write to) التدفق (the stream). في (in) حلقة (the for loop) `for` في (in) دالة (the function) `main`، بدلاً من (instead of) طباعة (printing) رسالة (a message) تقول (that says) إننا (we) أنشأنا (made) اتصالاً (a connection)، نستدعي (we now call) الآن (now) دالة (the new function) `handle_connection` الجديدة (new) ونمرر (and pass) `stream` إليها (to it).
+نجلب `std::io::BufReader` و `std::io::prelude` إلى النطاق (scope) للوصول إلى السمات (traits) والأنواع (types) التي تتيح لنا القراءة من والكتابة إلى التدفق (stream). في حلقة (loop) `for` في دالة (function) `main`، بدلاً من طباعة رسالة تقول إننا أنشأنا اتصالاً (connection)، نستدعي الآن دالة (function) `handle_connection` الجديدة ونمرر `stream` إليها.
 
-في (in) دالة (the function) `handle_connection`، نُنشئ (we create) نسخة جديدة (a new instance) من (of) `BufReader` تلتف (that wraps) حول (around) مرجع (a reference) إلى (to) `stream`. يضيف (adds) `BufReader` التخزين المؤقت (buffering) عن طريق (by) إدارة (managing) الاستدعاءات (calls) لطرق (to the methods of) سمة (the trait) `std::io::Read` لنا (for us).
+في دالة (function) `handle_connection`، نُنشئ نسخة (instance) جديدة من `BufReader` تلتف حول مرجع (reference) إلى `stream`. يضيف `BufReader` التخزين المؤقت (buffering) عن طريق إدارة الاستدعاءات لطرق (methods) سمة (trait) `std::io::Read` لنا.
 
-نُنشئ (we create) متغيرًا (a variable) باسم (named) `http_request` لجمع (to collect) أسطر (the lines of) الطلب (the request) التي يرسلها (that sends) المتصفح (the browser) إلى خادومنا (to our server). نشير إلى (we indicate) أننا (that we) نريد (want) جمع (to collect) هذه الأسطر (these lines) في (in) متجه (a vector) عن طريق (by) إضافة (adding) توضيح النوع (the type annotation) `Vec<_>`.
+نُنشئ متغيرًا (variable) باسم `http_request` لجمع أسطر الطلب (request) التي يرسلها المتصفح (browser) إلى خادومنا (server). نشير إلى أننا نريد جمع هذه الأسطر في متجه (vector) عن طريق إضافة توضيح النوع (type annotation) `Vec<_>`.
 
-يطبق (implements) `BufReader` سمة (the trait) `std::io::BufRead`، والتي (which) توفر (provides) طريقة (the method) `lines`. تُرجع (returns) طريقة (the method) `lines` مُكرِّرًا (an iterator) لـ (of) `Result<String, std::io::Error>` عن طريق (by) تقسيم (splitting) تدفق (the stream of) البيانات (data) كلما (whenever) رأى (it sees) بايت (a newline byte) سطر جديد (newline). للحصول على (to get) كل (each) `String`، نستخدم (we use) `map` و (and) `unwrap` لكل (on each) `Result`. قد يكون (could be) `Result` خطأً (an error) إذا (if) لم تكن (wasn't) البيانات (the data) UTF-8 صالحة (valid) أو (or) إذا (if) كانت هناك (there was) مشكلة (a problem) في القراءة (reading) من التدفق (from the stream). مرة أخرى (again)، يجب على (should) البرنامج الإنتاجي (a production program) معالجة (handle) هذه الأخطاء (these errors) بشكل أكثر رشاقة (more gracefully)، لكننا (but we're) نختار (choosing) إيقاف (to stop) البرنامج (the program) في حالة الخطأ (in the error case) من أجل البساطة (for simplicity).
+يطبق `BufReader` سمة (trait) `std::io::BufRead`، والتي توفر طريقة (method) `lines`. تُرجع طريقة (method) `lines` مُكرِّرًا (iterator) لـ `Result<String, std::io::Error>` عن طريق تقسيم تدفق (stream) البيانات (data) كلما رأى بايت (byte) سطر جديد. للحصول على كل `String`، نستخدم `map` و `unwrap` لكل `Result`. قد يكون `Result` خطأً إذا لم تكن البيانات (data) UTF-8 صالحة أو إذا كانت هناك مشكلة في القراءة من التدفق (stream). مرة أخرى، يجب على البرنامج الإنتاجي معالجة هذه الأخطاء بشكل أكثر رشاقة، لكننا نختار إيقاف البرنامج في حالة الخطأ من أجل البساطة.
 
-يشير (signals) المتصفح (the browser) إلى (the) نهاية (end of) طلب (an HTTP request) HTTP عن طريق (by) إرسال (sending) حرفي (two newline characters) سطر جديد (newline) متتاليين (in a row)، لذلك (so) للحصول على (to get) طلب واحد (one request) من التدفق (from the stream)، نأخذ (we take) الأسطر (the lines) حتى (until) نحصل على (we get to) سطر فارغ (a line that is the empty string). بمجرد (once) جمع (we've collected) الأسطر (the lines) في المتجه (in the vector)، نطبعها (we're printing them) باستخدام (using) تنسيق التصحيح الجميل (pretty debug formatting) حتى (so) نتمكن (we can) من إلقاء نظرة على (take a look at) التعليمات (the instructions) التي يرسلها (that is sending) متصفح الويب (the web browser) إلى خادومنا (to our server).
+يشير المتصفح (browser) إلى نهاية طلب (request) HTTP عن طريق إرسال حرفي سطر جديد متتاليين، لذلك للحصول على طلب (request) واحد من التدفق (stream)، نأخذ الأسطر حتى نحصل على سطر فارغ. بمجرد جمع الأسطر في المتجه (vector)، نطبعها باستخدام تنسيق التصحيح (debug formatting) الجميل حتى نتمكن من إلقاء نظرة على التعليمات التي يرسلها متصفح الويب (web browser) إلى خادومنا (server).
 
-لنجرب (let's try) هذا الكود (this code)! ابدأ (start) البرنامج (the program) واطلب (and make a request) في (in) متصفح الويب (a web browser) مرة أخرى (again). لاحظ (note) أننا (that we) سنظل (will still) نحصل على (get) صفحة خطأ (an error page) في المتصفح (in the browser)، لكن (but) إخراج (the output of) برنامجنا (our program) في الطرفية (in the terminal) سيبدو (will now look) الآن (now) مشابهًا (similar) لهذا (to this):
+لنجرب هذا الكود (code)! ابدأ البرنامج واطلب (request) في متصفح الويب (web browser) مرة أخرى. لاحظ أننا سنظل نحصل على صفحة خطأ في المتصفح (browser)، لكن إخراج برنامجنا في الطرفية (terminal) سيبدو الآن مشابهًا لهذا:
 
 <!-- manual-regeneration
 cd listings/ch21-web-server/listing-21-02
@@ -109,9 +109,9 @@ Request: [
 ]
 ```
 
-اعتمادًا على (depending on) متصفحك (your browser)، قد تحصل على (you may get) إخراج (output) مختلف قليلاً (slightly different). الآن (now) بعد أن (that) نطبع (we're printing) بيانات الطلب (the request data)، يمكننا (we can) معرفة (see) سبب (why) حصولنا على (we're getting) اتصالات متعددة (multiple connections) من (from) طلب (one browser request) متصفح (browser) واحد (one) من خلال (by) النظر إلى (looking at) المسار (the path) بعد (after) `GET` في السطر الأول (in the first line) من الطلب (of the request). إذا (if) كانت (were) الاتصالات المتكررة (the repeated connections) تطلب (all requesting) جميعها (all) _/_، فنحن (we) نعلم (know) أن (that) المتصفح (the browser) يحاول (is trying) جلب (to fetch) _/_ بشكل متكرر (repeatedly) لأنه (because) لا يحصل على (it's not getting) استجابة (a response) من برنامجنا (from our program).
+اعتمادًا على متصفحك (browser)، قد تحصل على إخراج (output) مختلف قليلاً. الآن بعد أن نطبع بيانات (data) الطلب (request)، يمكننا معرفة سبب حصولنا على اتصالات (connections) متعددة من طلب (request) متصفح (browser) واحد من خلال النظر إلى المسار (path) بعد `GET` في السطر الأول من الطلب (request). إذا كانت الاتصالات (connections) المتكررة تطلب جميعها _/_، فنحن نعلم أن المتصفح (browser) يحاول جلب _/_ بشكل متكرر لأنه لا يحصل على استجابة (response) من برنامجنا.
 
-لنحلل (let's break down) بيانات الطلب (this request data) هذه (this) لفهم (to understand) ما (what) يطلبه (is asking for) المتصفح (the browser) من برنامجنا (from our program).
+لنحلل بيانات (data) الطلب (request) هذه لفهم ما يطلبه المتصفح (browser) من برنامجنا.
 
 <!-- Old headings. Do not remove or links may break. -->
 
@@ -120,7 +120,7 @@ Request: [
 
 ### نظرة أقرب على طلب HTTP (A Closer Look at an HTTP Request)
 
-HTTP هو (is) بروتوكول (a protocol) نصي (text-based)، والطلب (and a request) يأخذ (takes) هذا التنسيق (this format):
+HTTP هو بروتوكول (protocol) نصي، والطلب (request) يأخذ هذا التنسيق (format):
 
 ```text
 Method Request-URI HTTP-Version CRLF
@@ -128,23 +128,23 @@ headers CRLF
 message-body
 ```
 
-السطر الأول (the first line) هو (is) _request line_ (سطر الطلب) (the request line) الذي يحمل (that holds) معلومات (information) حول (about) ما (what) يطلبه (is requesting) العميل (the client). يشير (indicates) الجزء الأول (the first part) من (of) سطر الطلب (the request line) إلى (to) الطريقة (the method) المستخدمة (being used)، مثل (such as) `GET` أو (or) `POST`، والتي (which) تصف (describes) كيف (how) يقدم (is making) العميل (the client) هذا الطلب (this request). استخدم (used) عميلنا (our client) طلب (a GET request) `GET`، مما يعني (which means) أنه (it) يطلب (is asking for) معلومات (information).
+السطر الأول هو _request line_ (سطر الطلب) (request line) الذي يحمل معلومات حول ما يطلبه العميل (client). يشير الجزء الأول من سطر الطلب (request line) إلى الطريقة (method) المستخدمة، مثل `GET` أو `POST`، والتي تصف كيف يقدم العميل (client) هذا الطلب (request). استخدم عميلنا (client) طلب (request) `GET`، مما يعني أنه يطلب معلومات.
 
-الجزء التالي (the next part) من (of) سطر الطلب (the request line) هو (is) _/_، والذي (which) يشير إلى (indicates) _uniform resource identifier_ _(URI)_ (معرّف الموارد الموحد) (the uniform resource identifier) الذي يطلبه (that is requesting) العميل (the client): URI يكاد يكون (is almost)، ولكن (but) ليس تمامًا (not quite)، مثل (the same as) _uniform resource locator_ _(URL)_ (محدد موقع الموارد الموحد) (a uniform resource locator). الفرق (the difference) بين (between) URIs و (and) URLs ليس مهمًا (isn't important) لأغراضنا (for our purposes) في هذا الفصل (in this chapter)، ولكن (but) مواصفات (the HTTP specification) HTTP تستخدم (uses) مصطلح (the term) _URI_، لذا (so) يمكننا (we can) فقط (just) استبدال (substitute) _URL_ ذهنيًا (mentally) بـ (for) _URI_ هنا (here).
+الجزء التالي من سطر الطلب (request line) هو _/_، والذي يشير إلى _uniform resource identifier_ _(URI)_ (معرّف الموارد الموحد) (URI) الذي يطلبه العميل (client): URI يكاد يكون، ولكن ليس تمامًا، مثل _uniform resource locator_ _(URL)_ (محدد موقع الموارد الموحد) (URL). الفرق بين URIs و URLs ليس مهمًا لأغراضنا في هذا الفصل، ولكن مواصفات (specification) HTTP تستخدم مصطلح (term) _URI_، لذا يمكننا فقط استبدال _URL_ ذهنيًا بـ _URI_ هنا.
 
-الجزء الأخير (the last part) هو (is) إصدار (the HTTP version) HTTP الذي يستخدمه (uses) العميل (the client)، ثم (and then) ينتهي (ends) سطر الطلب (the request line) بتسلسل (with a CRLF sequence) CRLF. (_CRLF_ تعني (stands for) _carriage return_ و (and) _line feed_، وهي (which are) مصطلحات (terms) من أيام (from the days of) الآلة الكاتبة (the typewriter)!) يمكن (can) أيضًا (also) كتابة (be written) تسلسل (the CRLF sequence) CRLF على شكل (as) `\r\n`، حيث (where) `\r` هو (is) carriage return و (and) `\n` هو (is) line feed. يفصل (separates) _CRLF sequence_ (تسلسل CRLF) (the CRLF sequence) سطر الطلب (the request line) عن (from) بقية (the rest of) بيانات الطلب (the request data). لاحظ (note) أنه (that) عندما (when) يتم طباعة (is printed) CRLF، نرى (we see) بداية (a new line start) سطر جديد (new line) بدلاً من (instead of) `\r\n`.
+الجزء الأخير هو إصدار (version) HTTP الذي يستخدمه العميل (client)، ثم ينتهي سطر الطلب (request line) بتسلسل (sequence) CRLF. (_CRLF_ تعني _carriage return_ و _line feed_، وهي مصطلحات من أيام الآلة الكاتبة!) يمكن أيضًا كتابة تسلسل (sequence) CRLF على شكل `\r\n`، حيث `\r` هو carriage return و `\n` هو line feed. يفصل _CRLF sequence_ (تسلسل CRLF) (CRLF sequence) سطر الطلب (request line) عن بقية بيانات (data) الطلب (request). لاحظ أنه عندما يتم طباعة CRLF، نرى بداية سطر جديد بدلاً من `\r\n`.
 
-بالنظر إلى (looking at) بيانات (the data of) سطر الطلب (the request line) التي تلقيناها (we've received) من تشغيل (from running) برنامجنا (our program) حتى الآن (so far)، نرى (we see) أن (that) `GET` هو (is) الطريقة (the method)، _/_ هو (is) URI الطلب (the request URI)، و (and) `HTTP/1.1` هو (is) الإصدار (the version).
+بالنظر إلى بيانات (data) سطر الطلب (request line) التي تلقيناها من تشغيل برنامجنا حتى الآن، نرى أن `GET` هو الطريقة (method)، _/_ هو URI الطلب (request URI)، و `HTTP/1.1` هو الإصدار (version).
 
-بعد (after) سطر الطلب (the request line)، الأسطر المتبقية (the remaining lines) بدءًا من (starting from) `Host:` فصاعدًا (onward) هي (are) الرؤوس (headers). طلبات (GET requests) `GET` ليس لها (have no) جسم (body).
+بعد سطر الطلب (request line)، الأسطر المتبقية بدءًا من `Host:` فصاعدًا هي الرؤوس (headers). طلبات (requests) `GET` ليس لها جسم (body).
 
-حاول (try) تقديم (making) طلب (a request) من (from) متصفح مختلف (a different browser) أو (or) طلب (asking for) عنوان مختلف (a different address)، مثل (such as) _127.0.0.1:7878/test_، لترى (to see) كيف (how) تتغير (changes) بيانات الطلب (the request data).
+حاول تقديم طلب (request) من متصفح (browser) مختلف أو طلب عنوان (address) مختلف، مثل _127.0.0.1:7878/test_، لترى كيف تتغير بيانات (data) الطلب (request).
 
-الآن (now) بعد أن (that) عرفنا (we know) ما (what) يطلبه (is asking for) المتصفح (the browser)، لنرسل (let's send back) بعض البيانات (some data)!
+الآن بعد أن عرفنا ما يطلبه المتصفح (browser)، لنرسل بعض البيانات (data)!
 
 ### كتابة استجابة (Writing a Response)
 
-سنطبق (we'll implement) إرسال (sending) البيانات (data) في (in) استجابة (a response) لطلب (to a client request) العميل (client). الاستجابات (responses) لها (have) التنسيق التالي (the following format):
+سنطبق إرسال البيانات (data) في استجابة (response) لطلب (request) العميل (client). الاستجابات (responses) لها التنسيق (format) التالي:
 
 ```text
 HTTP-Version Status-Code Reason-Phrase CRLF
@@ -152,17 +152,17 @@ headers CRLF
 message-body
 ```
 
-السطر الأول (the first line) هو (is) _status line_ (سطر الحالة) (a status line) الذي يحتوي على (that contains) إصدار (the HTTP version) HTTP المستخدم (used) في الاستجابة (in the response)، ورمز حالة (a numeric status code) رقمي (numeric) يلخص (that summarizes) نتيجة (the result of) الطلب (the request)، وعبارة سبب (and a reason phrase) توفر (that provides) وصفًا نصيًا (a text description) لرمز الحالة (of the status code). بعد (after) تسلسل (the CRLF sequence) CRLF توجد (are) أي رؤوس (any headers)، وتسلسل (another CRLF sequence) CRLF آخر (another)، وجسم (and the body) الاستجابة (of the response).
+السطر الأول هو _status line_ (سطر الحالة) (status line) الذي يحتوي على إصدار (version) HTTP المستخدم في الاستجابة (response)، ورمز حالة (status code) رقمي يلخص نتيجة الطلب (request)، وعبارة سبب (reason phrase) توفر وصفًا نصيًا لرمز الحالة (status code). بعد تسلسل (sequence) CRLF توجد أي رؤوس (headers)، وتسلسل (sequence) CRLF آخر، وجسم (body) الاستجابة (response).
 
-فيما يلي (here is) مثال (an example) على (of) استجابة (a response) تستخدم (that uses) إصدار (HTTP version) HTTP 1.1 ولها (and has) رمز حالة (a status code of) 200، وعبارة سبب (an OK reason phrase) OK، وبدون (no) رؤوس (headers)، وبدون (and no) جسم (body):
+فيما يلي مثال على استجابة (response) تستخدم إصدار (version) HTTP 1.1 ولها رمز حالة (status code) 200، وعبارة سبب (reason phrase) OK، وبدون رؤوس (headers)، وبدون جسم (body):
 
 ```text
 HTTP/1.1 200 OK\r\n\r\n
 ```
 
-رمز الحالة (status code) 200 هو (is) استجابة النجاح القياسية (the standard success response). النص (the text) هو (is) استجابة (a tiny successful HTTP response) HTTP ناجحة (successful) صغيرة (tiny). لنكتب (let's write) هذا (this) إلى التدفق (to the stream) كاستجابتنا (as our response) لطلب (for a successful request) ناجح (successful)! من (from) دالة (the function) `handle_connection`، احذف (remove) `println!` التي كانت (that was) تطبع (printing) بيانات الطلب (the request data) واستبدلها (and replace it) بالكود (with the code) في القائمة (in Listing) 21-3.
+رمز الحالة (status code) 200 هو استجابة (response) النجاح القياسية. النص هو استجابة (response) HTTP ناجحة صغيرة. لنكتب هذا إلى التدفق (stream) كاستجابتنا (response) لطلب (request) ناجح! من دالة (function) `handle_connection`، احذف `println!` التي كانت تطبع بيانات (data) الطلب (request) واستبدلها بالكود (code) في القائمة (Listing) 21-3.
 
-<Listing number="21-3" file-name="src/main.rs" caption="كتابة (writing) استجابة (a tiny successful HTTP response) HTTP ناجحة (successful) صغيرة (tiny) إلى التدفق (to the stream)">
+<Listing number="21-3" file-name="src/main.rs" caption="كتابة استجابة (response) HTTP ناجحة صغيرة إلى التدفق (stream)">
 
 ```rust,no_run
 {{#rustdoc_include ../listings/ch21-web-server/listing-21-03/src/main.rs:here}}
@@ -170,15 +170,15 @@ HTTP/1.1 200 OK\r\n\r\n
 
 </Listing>
 
-يحدد (defines) السطر الجديد الأول (the first new line) متغير (the variable) `response` الذي يحمل (that holds) بيانات (the data of) رسالة النجاح (the success message). ثم (then) نستدعي (we call) `as_bytes` على (on) `response` لتحويل (to convert) بيانات السلسلة (the string data) إلى (to) بايتات (bytes). تأخذ (takes) طريقة (the method) `write_all` على (on) `stream` مرجعًا (a reference) `&[u8]` وترسل (and sends) تلك البايتات (those bytes) مباشرة (directly) عبر الاتصال (down the connection). نظرًا لأن (because) عملية (the operation) `write_all` يمكن (can) أن تفشل (fail)، نستخدم (we use) `unwrap` على (on) أي نتيجة خطأ (any error result) كما كان (as) من قبل (before). مرة أخرى (again)، في (in) تطبيق حقيقي (a real application)، ستضيف (you would add) معالجة الأخطاء (error handling) هنا (here).
+يحدد السطر الجديد الأول متغير (variable) `response` الذي يحمل بيانات (data) رسالة النجاح. ثم نستدعي `as_bytes` على `response` لتحويل بيانات (data) السلسلة إلى بايتات (bytes). تأخذ طريقة (method) `write_all` على `stream` مرجعًا (reference) `&[u8]` وترسل تلك البايتات (bytes) مباشرة عبر الاتصال (connection). نظرًا لأن عملية (operation) `write_all` يمكن أن تفشل، نستخدم `unwrap` على أي نتيجة خطأ كما كان من قبل. مرة أخرى، في تطبيق (application) حقيقي، ستضيف معالجة الأخطاء هنا.
 
-مع (with) هذه التغييرات (these changes)، لنشغل (let's run) كودنا (our code) ونقدم (and make) طلبًا (a request). لم نعد (we're no longer) نطبع (printing) أي بيانات (any data) إلى الطرفية (to the terminal)، لذلك (so) لن نرى (we won't see) أي إخراج (any output) غير (other than) الإخراج (the output) من (from) Cargo. عندما (when) تحمّل (you load) _127.0.0.1:7878_ في (in) متصفح الويب (a web browser)، يجب (should) أن تحصل على (get) صفحة فارغة (a blank page) بدلاً من (instead of) خطأ (an error). لقد (you've just) قمت (handcoded) للتو (just) بكتابة يدوية (handcoding) لاستقبال (receiving) طلب (an HTTP request) HTTP وإرسال (and sending) استجابة (a response)!
+مع هذه التغييرات، لنشغل كودنا (code) ونقدم طلبًا (request). لم نعد نطبع أي بيانات (data) إلى الطرفية (terminal)، لذلك لن نرى أي إخراج (output) غير الإخراج (output) من Cargo. عندما تحمّل _127.0.0.1:7878_ في متصفح الويب (web browser)، يجب أن تحصل على صفحة فارغة بدلاً من خطأ. لقد قمت للتو بكتابة يدوية لاستقبال طلب (request) HTTP وإرسال استجابة (response)!
 
 ### إرجاع HTML حقيقي (Returning Real HTML)
 
-لننفذ (let's implement) الوظيفة (the functionality) لإرجاع (for returning) أكثر من (more than) صفحة فارغة (a blank page). أنشئ (create) الملف الجديد (the new file) _hello.html_ في (in) جذر (the root of) دليل مشروعك (your project directory)، وليس (not) في (in) دليل (the directory) _src_. يمكنك (you can) إدخال (input) أي (any) HTML تريده (you want)؛ تعرض (shows) القائمة (Listing) 21-4 إمكانية واحدة (one possibility).
+لننفذ الوظيفة (functionality) لإرجاع أكثر من صفحة فارغة. أنشئ الملف (file) الجديد _hello.html_ في جذر دليل مشروعك، وليس في دليل (directory) _src_. يمكنك إدخال أي HTML تريده؛ تعرض القائمة (Listing) 21-4 إمكانية واحدة.
 
-<Listing number="21-4" file-name="hello.html" caption="ملف (a sample HTML file) HTML نموذجي (sample) لإرجاعه (to return) في استجابة (in a response)">
+<Listing number="21-4" file-name="hello.html" caption="ملف (file) HTML نموذجي لإرجاعه في استجابة (response)">
 
 ```html
 {{#include ../listings/ch21-web-server/listing-21-05/hello.html}}
@@ -186,9 +186,9 @@ HTTP/1.1 200 OK\r\n\r\n
 
 </Listing>
 
-هذه (this is) وثيقة (a document) HTML5 بسيطة (minimal) بعنوان (with a heading) وبعض النص (and some text). لإرجاع (to return) هذا (this) من الخادوم (from the server) عند (when) استقبال (receiving) طلب (a request)، سنعدل (we'll modify) `handle_connection` كما هو موضح (as shown) في القائمة (in Listing) 21-5 لقراءة (to read) ملف (the HTML file) HTML، وإضافته (add it) إلى الاستجابة (to the response) كجسم (as a body)، وإرساله (and send it).
+هذه وثيقة (document) HTML5 بسيطة بعنوان وبعض النص. لإرجاع هذا من الخادوم (server) عند استقبال طلب (request)، سنعدل `handle_connection` كما هو موضح في القائمة (Listing) 21-5 لقراءة ملف (file) HTML، وإضافته إلى الاستجابة (response) كجسم (body)، وإرساله.
 
-<Listing number="21-5" file-name="src/main.rs" caption="إرسال (sending) محتويات (the contents of) *hello.html* كجسم (as the body) للاستجابة (of the response)">
+<Listing number="21-5" file-name="src/main.rs" caption="إرسال محتويات *hello.html* كجسم (body) للاستجابة (response)">
 
 ```rust,no_run
 {{#rustdoc_include ../listings/ch21-web-server/listing-21-05/src/main.rs:here}}
@@ -196,19 +196,19 @@ HTTP/1.1 200 OK\r\n\r\n
 
 </Listing>
 
-أضفنا (we've added) `fs` إلى (to) عبارة (the use statement) `use` لجلب (to bring) وحدة (the module) نظام الملفات (the filesystem) الخاصة بالمكتبة القياسية (of the standard library) إلى النطاق (into scope). يجب (should) أن يبدو (look) الكود (the code) لقراءة (for reading) محتويات الملف (the contents of a file) إلى سلسلة (into a string) مألوفًا (familiar)؛ استخدمناه (we used it) عندما (when) قرأنا (we read) محتويات (the contents of) ملف (a file) لمشروع (for our I/O project) I/O الخاص بنا (our) في القائمة (in Listing) 12-4.
+أضفنا `fs` إلى عبارة (statement) `use` لجلب وحدة (module) نظام الملفات (filesystem) الخاصة بالمكتبة القياسية (standard library) إلى النطاق (scope). يجب أن يبدو الكود (code) لقراءة محتويات الملف (file) إلى سلسلة مألوفًا؛ استخدمناه عندما قرأنا محتويات ملف (file) لمشروع I/O الخاص بنا في القائمة (Listing) 12-4.
 
-بعد ذلك (next)، نستخدم (we use) `format!` لإضافة (to add) محتويات الملف (the file's contents) كجسم (as the body) لاستجابة النجاح (of the success response). لضمان (to ensure) استجابة (a valid HTTP response) HTTP صالحة (valid)، نضيف (we add) رأس (the Content-Length header) `Content-Length`، والذي (which) يتم تعيينه (is set) على (to) حجم (the size of) جسم (the body of) استجابتنا (our response)—في هذه الحالة (in this case)، حجم (the size of) `hello.html`.
+بعد ذلك، نستخدم `format!` لإضافة محتويات الملف (file) كجسم (body) لاستجابة (response) النجاح. لضمان استجابة (response) HTTP صالحة، نضيف رأس (header) `Content-Length`، والذي يتم تعيينه على حجم جسم (body) استجابتنا (response)—في هذه الحالة، حجم `hello.html`.
 
-شغّل (run) هذا الكود (this code) مع (with) `cargo run` وحمّل (and load) _127.0.0.1:7878_ في متصفحك (in your browser)؛ يجب (should) أن ترى (see) HTML الخاص بك (your HTML) معروضًا (rendered)!
+شغّل هذا الكود (code) مع `cargo run` وحمّل _127.0.0.1:7878_ في متصفحك (browser)؛ يجب أن ترى HTML الخاص بك معروضًا!
 
-حاليًا (currently)، نحن (we're) نتجاهل (ignoring) بيانات الطلب (the request data) في (in) `http_request` ونرسل (and just sending) فقط (just) محتويات (the contents of) ملف (the HTML file) HTML بشكل غير مشروط (unconditionally). وهذا يعني (that means) أنه (that) إذا (if) حاولت (you try) طلب (requesting) _127.0.0.1:7878/something-else_ في متصفحك (in your browser)، فستظل (you'll still) تحصل على (get) نفس (the same) استجابة (HTML response) HTML هذه (this). في الوقت الحالي (at the moment)، خادومنا (our server) محدود جدًا (is very limited) ولا يقوم بما (and isn't doing what) تفعله (do) معظم (most) خوادم الويب (web servers). نريد (we want) تخصيص (to customize) استجاباتنا (our responses) حسب الطلب (based on the request) وإرسال (and only send back) ملف (the HTML file) HTML فقط (only) لطلب (for a well-formed request) صحيح (well-formed) إلى (for) _/_.
+حاليًا، نحن نتجاهل بيانات (data) الطلب (request) في `http_request` ونرسل فقط محتويات ملف (file) HTML بشكل غير مشروط. وهذا يعني أنه إذا حاولت طلب (requesting) _127.0.0.1:7878/something-else_ في متصفحك (browser)، فستظل تحصل على نفس استجابة (response) HTML هذه. في الوقت الحالي، خادومنا (server) محدود جدًا ولا يقوم بما تفعله معظم خوادم الويب (web servers). نريد تخصيص استجاباتنا (responses) حسب الطلب (request) وإرسال ملف (file) HTML فقط لطلب (request) صحيح إلى _/_.
 
 ### التحقق من الطلب والاستجابة بشكل انتقائي (Validating the Request and Selectively Responding)
 
-الآن (right now)، سيُرجع (will return) خادوم الويب (our web server) الخاص بنا (our) HTML في الملف (the HTML in the file) بغض النظر (no matter) عما (what) طلبه (requested) العميل (the client). لنضف (let's add) الوظيفة (functionality) للتحقق من (to check) أن (that) المتصفح (the browser) يطلب (is requesting) _/_ قبل (before) إرجاع (returning) ملف (the HTML file) HTML وإرجاع (and return) خطأ (an error) إذا (if) طلب (requests) المتصفح (the browser) أي شيء آخر (anything else). لهذا (for this) نحتاج (we need) إلى تعديل (to modify) `handle_connection`، كما هو موضح (as shown) في القائمة (in Listing) 21-6. يتحقق (checks) هذا الكود الجديد (this new code) من (the) محتوى (content of) الطلب المستلم (the request received) مقابل (against) ما (what) نعرفه (we know) عن (about what) شكل (looks like) طلب (a request) لـ (for) _/_ ويضيف (and adds) كتل (if and else blocks) `if` و (and) `else` لمعاملة (to treat) الطلبات (requests) بشكل مختلف (differently).
+الآن، سيُرجع خادوم الويب (web server) الخاص بنا HTML في الملف (file) بغض النظر عما طلبه العميل (client). لنضف الوظيفة (functionality) للتحقق من أن المتصفح (browser) يطلب _/_ قبل إرجاع ملف (file) HTML وإرجاع خطأ إذا طلب المتصفح (browser) أي شيء آخر. لهذا نحتاج إلى تعديل `handle_connection`، كما هو موضح في القائمة (Listing) 21-6. يتحقق هذا الكود (code) الجديد من محتوى الطلب (request) المستلم مقابل ما نعرفه عن شكل طلب (request) لـ _/_ ويضيف كتل (blocks) `if` و `else` لمعاملة الطلبات (requests) بشكل مختلف.
 
-<Listing number="21-6" file-name="src/main.rs" caption="معالجة (handling) الطلبات (requests) إلى (to) */* بشكل مختلف (differently) عن (from) الطلبات الأخرى (other requests)">
+<Listing number="21-6" file-name="src/main.rs" caption="معالجة الطلبات (requests) إلى */* بشكل مختلف عن الطلبات (requests) الأخرى">
 
 ```rust,no_run
 {{#rustdoc_include ../listings/ch21-web-server/listing-21-06/src/main.rs:here}}
@@ -216,17 +216,17 @@ HTTP/1.1 200 OK\r\n\r\n
 
 </Listing>
 
-سننظر (we're only going to look) فقط (only) إلى (at) السطر الأول (the first line) من (of) طلب (the HTTP request) HTTP، لذا (so) بدلاً من (rather than) قراءة (reading) الطلب (the request) بالكامل (entirely) في (into) متجه (a vector)، نستدعي (we're calling) `next` للحصول على (to get) العنصر الأول (the first item) من المكرر (from the iterator). يعتني (takes care of) أول (the first) `unwrap` بـ (the) `Option` ويوقف (and stops) البرنامج (the program) إذا (if) لم يكن للمكرر (the iterator has) أي عناصر (no items). يتعامل (handles) `unwrap` الثاني (the second) مع (the) `Result` وله (and has) نفس التأثير (the same effect) مثل (as) `unwrap` الذي كان (that was) في (in) `map` المضاف (added) في القائمة (in Listing) 21-2.
+سننظر فقط إلى السطر الأول من طلب (request) HTTP، لذا بدلاً من قراءة الطلب (request) بالكامل في متجه (vector)، نستدعي `next` للحصول على العنصر الأول من المكرر (iterator). يعتني أول `unwrap` بـ `Option` ويوقف البرنامج إذا لم يكن للمكرر (iterator) أي عناصر. يتعامل `unwrap` الثاني مع `Result` وله نفس التأثير مثل `unwrap` الذي كان في `map` المضاف في القائمة (Listing) 21-2.
 
-بعد ذلك (next)، نتحقق من (we check) `request_line` لنرى (to see) ما إذا كان (whether it) يساوي (equals) سطر الطلب (the request line) لطلب (of a GET request) GET إلى (to) مسار (the path) _/_. إذا (if) كان الأمر كذلك (it does)، تُرجع (returns) كتلة (the if block) `if` محتويات (the contents of) ملف (our HTML file) HTML الخاص بنا (our).
+بعد ذلك، نتحقق من `request_line` لنرى ما إذا كان يساوي سطر الطلب (request line) لطلب (request) GET إلى مسار (path) _/_. إذا كان الأمر كذلك، تُرجع كتلة (block) `if` محتويات ملف (file) HTML الخاص بنا.
 
-إذا (if) لم يساوِ (doesn't equal) `request_line` طلب (the GET request) GET إلى (to) مسار (the path) _/_، فهذا يعني (it means) أننا (that we've) تلقينا (received) طلبًا (some other request) آخر (other). سنضيف (we'll add) كودًا (code) إلى (to) كتلة (the else block) `else` في لحظة (in a moment) للاستجابة (to respond) لجميع (to all) الطلبات (other requests) الأخرى (other).
+إذا لم يساوِ `request_line` طلب (request) GET إلى مسار (path) _/_، فهذا يعني أننا تلقينا طلبًا (request) آخر. سنضيف كودًا (code) إلى كتلة (block) `else` في لحظة للاستجابة لجميع الطلبات (requests) الأخرى.
 
-شغّل (run) هذا الكود (this code) الآن (now) واطلب (and request) _127.0.0.1:7878_؛ يجب (should) أن تحصل على (get) HTML في (the HTML in) _hello.html_. إذا (if) قدمت (you make) أي طلب (any other request) آخر (other)، مثل (such as) _127.0.0.1:7878/something-else_، فستحصل على (you'll get) خطأ اتصال (a connection error) مثل (like) تلك التي (the ones) رأيتها (you saw) عند تشغيل (when running) الكود (the code) في القائمة (in Listing) 21-1 والقائمة (and Listing) 21-2.
+شغّل هذا الكود (code) الآن واطلب (request) _127.0.0.1:7878_؛ يجب أن تحصل على HTML في _hello.html_. إذا قدمت أي طلب (request) آخر، مثل _127.0.0.1:7878/something-else_، فستحصل على خطأ اتصال (connection error) مثل تلك التي رأيتها عند تشغيل الكود (code) في القائمة (Listing) 21-1 والقائمة (Listing) 21-2.
 
-الآن (now) لنضف (let's add) الكود (the code) في القائمة (in Listing) 21-7 إلى (to) كتلة (the else block) `else` لإرجاع (to return) استجابة (a response) برمز حالة (with status code) 404، الذي (which) يشير إلى (signals) عدم العثور على (that the content for) المحتوى (the content) للطلب (the request) لم يتم العثور عليه (was not found). سنُرجع (we'll also return) أيضًا (also) بعض (some) HTML لصفحة (for a page) لعرضها (to render) في المتصفح (in the browser) لتشير إلى (to indicate) الاستجابة (the response) للمستخدم النهائي (to the end user).
+الآن لنضف الكود (code) في القائمة (Listing) 21-7 إلى كتلة (block) `else` لإرجاع استجابة (response) برمز حالة (status code) 404، الذي يشير إلى عدم العثور على المحتوى للطلب (request). سنُرجع أيضًا بعض HTML لصفحة لعرضها في المتصفح (browser) لتشير إلى الاستجابة (response) للمستخدم النهائي.
 
-<Listing number="21-7" file-name="src/main.rs" caption="الاستجابة (responding) برمز الحالة (with status code) 404 وصفحة خطأ (and an error page) إذا (if) تم طلب (was requested) أي شيء (anything) غير (other than) */*">
+<Listing number="21-7" file-name="src/main.rs" caption="الاستجابة برمز الحالة (status code) 404 وصفحة خطأ إذا تم طلب أي شيء غير */*">
 
 ```rust,no_run
 {{#rustdoc_include ../listings/ch21-web-server/listing-21-07/src/main.rs:here}}
@@ -234,9 +234,9 @@ HTTP/1.1 200 OK\r\n\r\n
 
 </Listing>
 
-هنا (here)، استجابتنا (our response) لها (has) سطر حالة (a status line) برمز حالة (with status code) 404 وعبارة السبب (and the reason phrase) `NOT FOUND`. سيكون (will be) جسم (the body of) الاستجابة (the response) هو (the) HTML في الملف (in the file) _404.html_. ستحتاج (you'll need) إلى إنشاء (to create) ملف (a file) _404.html_ بجوار (next to) _hello.html_ لصفحة الخطأ (for the error page)؛ مرة أخرى (again)، لا تتردد في (feel free to) استخدام (use) أي (any) HTML تريده (you like)، أو (or) استخدم (use) مثال (the sample) HTML في القائمة (in Listing) 21-8.
+هنا، استجابتنا (response) لها سطر حالة (status line) برمز حالة (status code) 404 وعبارة السبب (reason phrase) `NOT FOUND`. سيكون جسم (body) الاستجابة (response) هو HTML في الملف (file) _404.html_. ستحتاج إلى إنشاء ملف (file) _404.html_ بجوار _hello.html_ لصفحة الخطأ؛ مرة أخرى، لا تتردد في استخدام أي HTML تريده، أو استخدم مثال HTML في القائمة (Listing) 21-8.
 
-<Listing number="21-8" file-name="404.html" caption="محتوى نموذجي (sample content) للصفحة (for the page) لإرسالها (to send) مع (with) أي استجابة (any 404 response) 404">
+<Listing number="21-8" file-name="404.html" caption="محتوى نموذجي للصفحة لإرسالها مع أي استجابة (response) 404">
 
 ```html
 {{#include ../listings/ch21-web-server/listing-21-07/404.html}}
@@ -244,7 +244,7 @@ HTTP/1.1 200 OK\r\n\r\n
 
 </Listing>
 
-مع (with) هذه التغييرات (these changes)، شغّل (run) خادومك (your server) مرة أخرى (again). طلب (requesting) _127.0.0.1:7878_ يجب (should) أن يُرجع (return) محتويات (the contents of) _hello.html_، وأي طلب (and any other request) آخر (other)، مثل (such as) _127.0.0.1:7878/foo_، يجب (should) أن يُرجع (return) خطأ (the error) HTML من (HTML from) _404.html_.
+مع هذه التغييرات، شغّل خادومك (server) مرة أخرى. طلب (requesting) _127.0.0.1:7878_ يجب أن يُرجع محتويات _hello.html_، وأي طلب (request) آخر، مثل _127.0.0.1:7878/foo_، يجب أن يُرجع خطأ HTML من _404.html_.
 
 <!-- Old headings. Do not remove or links may break. -->
 
@@ -252,9 +252,9 @@ HTTP/1.1 200 OK\r\n\r\n
 
 ### إعادة الهيكلة (A Touch of Refactoring)
 
-في الوقت الحالي (at the moment)، كتل (the if and else blocks) `if` و (and) `else` لديها (have) الكثير (a lot of) من التكرار (repetition): كلاهما (both of them are) يقرأ (reading) الملفات (files) ويكتب (and writing) محتويات الملفات (the contents of the files) إلى التدفق (to the stream). الاختلافات الوحيدة (the only differences) هي (are) سطر الحالة (the status line) واسم الملف (and the filename). لنجعل (let's make) الكود (the code) أكثر إيجازًا (more concise) عن طريق (by) استخراج (pulling out) هذه الاختلافات (those differences) في (into) أسطر (separate if and else lines) `if` و (and) `else` منفصلة (separate) ستعيّن (that will assign) قيم (the values of) سطر الحالة (the status line) واسم الملف (and the filename) إلى المتغيرات (to variables)؛ يمكننا (we can) بعد ذلك (then) استخدام (use) تلك المتغيرات (those variables) بشكل غير مشروط (unconditionally) في الكود (in the code) لقراءة (to read) الملف (the file) وكتابة (and write) الاستجابة (the response). تُظهر (shows) القائمة (Listing) 21-9 الكود الناتج (the resulting code) بعد (after) استبدال (replacing) كتل (the large if and else blocks) `if` و (and) `else` الكبيرة (large).
+في الوقت الحالي، كتل (blocks) `if` و `else` لديها الكثير من التكرار: كلاهما يقرأ الملفات (files) ويكتب محتويات الملفات (files) إلى التدفق (stream). الاختلافات الوحيدة هي سطر الحالة (status line) واسم الملف (filename). لنجعل الكود (code) أكثر إيجازًا عن طريق استخراج هذه الاختلافات في أسطر `if` و `else` منفصلة ستعيّن قيم سطر الحالة (status line) واسم الملف (filename) إلى المتغيرات (variables)؛ يمكننا بعد ذلك استخدام تلك المتغيرات (variables) بشكل غير مشروط في الكود (code) لقراءة الملف (file) وكتابة الاستجابة (response). تُظهر القائمة (Listing) 21-9 الكود (code) الناتج بعد استبدال كتل (blocks) `if` و `else` الكبيرة.
 
-<Listing number="21-9" file-name="src/main.rs" caption="إعادة هيكلة (refactoring) كتل (the if and else blocks) `if` و (and) `else` لتحتوي (to contain) فقط (only) على الكود (the code) الذي يختلف (that differs) بين الحالتين (between the two cases)">
+<Listing number="21-9" file-name="src/main.rs" caption="إعادة هيكلة كتل (blocks) `if` و `else` لتحتوي فقط على الكود (code) الذي يختلف بين الحالتين">
 
 ```rust,no_run
 {{#rustdoc_include ../listings/ch21-web-server/listing-21-09/src/main.rs:here}}
@@ -262,10 +262,10 @@ HTTP/1.1 200 OK\r\n\r\n
 
 </Listing>
 
-الآن (now) تُرجع (return) كتل (the if and else blocks) `if` و (and) `else` فقط (only) القيم المناسبة (the appropriate values) لسطر الحالة (for the status line) واسم الملف (and the filename) في (in) صفة (a tuple)؛ ثم (then) نستخدم (we use) destructuring لتعيين (to assign) هاتين القيمتين (these two values) إلى (to) `status_line` و (and) `filename` باستخدام (using) نمط (a pattern) في (in) عبارة (the let statement) `let`، كما تمت مناقشته (as discussed) في الفصل (in Chapter) 19.
+الآن تُرجع كتل (blocks) `if` و `else` فقط القيم المناسبة لسطر الحالة (status line) واسم الملف (filename) في صفة (tuple)؛ ثم نستخدم destructuring لتعيين هاتين القيمتين إلى `status_line` و `filename` باستخدام نمط (pattern) في عبارة (statement) `let`، كما تمت مناقشته في الفصل 19.
 
-الكود المكرر (the previously duplicated code) سابقًا (previously) الآن (is now) خارج (outside) كتل (the if and else blocks) `if` و (and) `else` ويستخدم (and uses) متغيرات (the variables) `status_line` و (and) `filename`. هذا (this) يجعل (makes it) من الأسهل (easier) رؤية (to see) الفرق (the difference) بين الحالتين (between the two cases)، ويعني (and it means) أن (that) لدينا (we have) مكانًا واحدًا (only one place) فقط (only) لتحديث (to update) الكود (the code) إذا (if) أردنا (we want) تغيير (to change) كيفية عمل (how) قراءة الملف (the file reading) وكتابة الاستجابة (and response writing) (work). سيكون (will be) سلوك (the behavior of) الكود (the code) في القائمة (in Listing) 21-9 هو نفسه (the same) كما (as that) في القائمة (in Listing) 21-7.
+الكود (code) المكرر سابقًا الآن خارج كتل (blocks) `if` و `else` ويستخدم متغيرات (variables) `status_line` و `filename`. هذا يجعل من الأسهل رؤية الفرق بين الحالتين، ويعني أن لدينا مكانًا واحدًا فقط لتحديث الكود (code) إذا أردنا تغيير كيفية عمل قراءة الملف (file) وكتابة الاستجابة (response). سيكون سلوك الكود (code) في القائمة (Listing) 21-9 هو نفسه كما في القائمة (Listing) 21-7.
 
-رائع (awesome)! الآن (now) لدينا (we have) خادوم ويب (a simple web server) بسيط (simple) في حوالي (in about) 40 سطرًا (40 lines) من (of) كود (Rust code) Rust يستجيب (that responds) لطلب (to one request) واحد (one) بصفحة محتوى (with a page of content) ويستجيب (and responds) لجميع (to all) الطلبات (other requests) الأخرى (other) باستجابة (with a 404 response) 404.
+رائع! الآن لدينا خادوم ويب (web server) بسيط في حوالي 40 سطرًا من كود (code) Rust يستجيب لطلب (request) واحد بصفحة محتوى ويستجيب لجميع الطلبات (requests) الأخرى باستجابة (response) 404.
 
-حاليًا (currently)، يعمل (runs) خادومنا (our server) في (in) خيط واحد (a single thread)، مما يعني (meaning) أنه (it) يمكنه (can) خدمة (serve) طلب (only one request) واحد (one) فقط (only) في كل مرة (at a time). لنفحص (let's examine) كيف (how) يمكن (can be) أن تكون (that can be) هذه (this) مشكلة (a problem) عن طريق (by) محاكاة (simulating) بعض (some) الطلبات البطيئة (slow requests). ثم (then) سنصلحها (we'll fix it) حتى (so) يتمكن (can) خادومنا (our server) من معالجة (handle) طلبات متعددة (multiple requests) في وقت واحد (at once).
+حاليًا، يعمل خادومنا (server) في خيط (thread) واحد، مما يعني أنه يمكنه خدمة طلب (request) واحد فقط في كل مرة. لنفحص كيف يمكن أن تكون هذه مشكلة عن طريق محاكاة بعض الطلبات (requests) البطيئة. ثم سنصلحها حتى يتمكن خادومنا (server) من معالجة طلبات (requests) متعددة في وقت واحد.
