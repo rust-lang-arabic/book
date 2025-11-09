@@ -16,7 +16,7 @@
 استخدامها، لذا فإن الأمر يستحق استثمار الوقت في كتابة التوثيق. في الفصل
 3، ناقشنا كيفية التعليق على كود Rust باستخدام شرطتين مائلتين، `//`. تحتوي Rust أيضًا على
 نوع معين من التعليقات للتوثيق، يُعرف بشكل ملائم باسم
-_تعليق توثيق_ (documentation comment)، والذي سينشئ توثيق (documentation) HTML. يعرض HTML
+_تعليق توثيق_ (documentation comment)، والذي سينشئ توثيق HTML. يعرض HTML
 محتويات تعليقات التوثيق لعناصر API العامة المخصصة
 للمبرمجين المهتمين بمعرفة كيفية _استخدام_ صندوقك بدلاً من كيفية
 _تنفيذ_ صندوقك.
@@ -407,11 +407,11 @@ $ cargo publish
     Updating crates.io index
    Packaging guessing_game v0.1.0 (file:///projects/guessing_game)
     Packaged 6 files, 1.2KiB (895.0B compressed)
-   Verifying guessing_game v0.1.0 (file:///projects/guessing_game)
+   Verifying guessing_game v0.1.0
    Compiling guessing_game v0.1.0
 (file:///projects/guessing_game/target/package/guessing_game-0.1.0)
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.19s
-   Uploading guessing_game v0.1.0 (file:///projects/guessing_game)
+   Uploading guessing_game v0.1.0
     Uploaded guessing_game v0.1.0 to registry `crates-io`
 note: waiting for `guessing_game v0.1.0` to be available at registry
 `crates-io`.

@@ -5,7 +5,7 @@
 
 ## من خادوم أحادي الخيط إلى خادوم متعدد الخيوط (From a Single-Threaded to a Multithreaded Server)
 
-الآن، سيعالج الخادوم (server) كل طلب (request) بدوره، مما يعني أنه لن يعالج اتصالاً ثانيًا حتى ينتهي معالجة الاتصال الأول. إذا تلقى الخادوم (server) المزيد والمزيد من الطلبات (requests)، فإن هذا التنفيذ التسلسلي سيكون أقل وأقل مثاليةً. إذا تلقى الخادوم (server) طلبًا (request) يستغرق وقتًا طويلاً لمعالجته، فسيتعين على الطلبات (requests) اللاحقة الانتظار حتى ينتهي الطلب (request) الطويل, حتى لو كان من الممكن معالجة الطلبات (requests) الجديدة بسرعة. سنحتاج إلى إصلاح هذا، ولكن أولاً سننظر في المشكلة أثناء العمل.
+الآن، سيعالج الخادوم (server) كل طلب (request) بدوره، مما يعني أنه لن يعالج اتصالاً ثانيًا حتى ينتهي معالجة الاتصال الأول. إذا تلقى الخادوم المزيد والمزيد من الطلبات (requests)، فإن هذا التنفيذ التسلسلي سيكون أقل وأقل مثاليةً. إذا تلقى الخادوم طلبًا يستغرق وقتًا طويلاً لمعالجته، فسيتعين على الطلبات اللاحقة الانتظار حتى ينتهي الطلب الطويل, حتى لو كان من الممكن معالجة الطلبات الجديدة بسرعة. سنحتاج إلى إصلاح هذا، ولكن أولاً سننظر في المشكلة أثناء العمل.
 
 <!-- Old headings. Do not remove or links may break. -->
 
@@ -13,7 +13,7 @@
 
 ### محاكاة طلب بطيء (Simulating a Slow Request)
 
-سننظر في كيف يمكن لطلب (request) يتم معالجته ببطء أن يؤثر على الطلبات (requests) الأخرى المقدمة إلى تطبيق (implementation of) خادومنا (our server) الحالي. تطبق القائمة 21-10 معالجة طلب (request) إلى _/sleep_ مع استجابة بطيئة محاكاة ستتسبب في نوم الخادوم (server) لمدة خمس ثوانٍ قبل الاستجابة.
+سننظر في كيف يمكن لطلب (request) يتم معالجته ببطء أن يؤثر على الطلبات (requests) الأخرى المقدمة إلى تطبيق (implementation of) خادومنا (our server) الحالي. تطبق القائمة 21-10 معالجة طلب إلى _/sleep_ مع استجابة بطيئة محاكاة ستتسبب في نوم الخادوم (server) لمدة خمس ثوانٍ قبل الاستجابة.
 
 <Listing number="21-10" file-name="src/main.rs" caption="محاكاة طلب بطيء عن طريق النوم لمدة خمس ثوانٍ (Simulating a slow request by sleeping for five seconds)">
 
@@ -25,7 +25,7 @@
 
 انتقلنا من `if` إلى `match` الآن بعد أن أصبح لدينا ثلاث حالات. نحتاج إلى مطابقة (to pattern-match) صريحة على شريحة (on a slice) من `request_line` للمطابقة (to match) مع القيم الحرفية؛ لا يقوم `match` بالإشارة المرجعية (referencing) والإلغاء المرجعية (and dereferencing) التلقائية، مثل طريقة (method) المساواة.
 
-الذراع الأولى هي نفسها كتلة (block) `if` من القائمة 21-9. تطابق (matches) الذراع الثانية طلبًا (a request) إلى _/sleep_. عند استقبال هذا الطلب (request)، سينام الخادوم (server) لمدة خمس ثوانٍ قبل عرض صفحة HTML الناجحة. الذراع الثالثة هي نفسها كتلة (block) `else` من القائمة 21-9.
+الذراع الأولى هي نفسها كتلة (block) `if` من القائمة 21-9. تطابق (matches) الذراع الثانية طلبًا (a request) إلى _/sleep_. عند استقبال هذا الطلب (request)، سينام الخادوم (server) لمدة خمس ثوانٍ قبل عرض صفحة HTML الناجحة. الذراع الثالثة هي نفسها كتلة `else` من القائمة 21-9.
 
 يمكنك أن ترى كم هو بدائي خادومنا (our server): المكتبات الحقيقية ستتعامل مع التعرف على طلبات (of requests) متعددة بطريقة أقل إسهابًا بكثير!
 
@@ -35,15 +35,15 @@
 
 ### تحسين الإنتاجية باستخدام مجمع خيوط (Improving Throughput with a Thread Pool)
 
-_مجمع خيوط_ (_thread pool_) هو مجموعة من الخيوط (of threads) المولدة (spawned) التي هي جاهزة وتنتظر معالجة مهمة. عندما يتلقى البرنامج مهمة جديدة، فإنه يعيّن أحد الخيوط (the threads) في المجمع إلى المهمة، وسيعالج هذا الخيط (thread) المهمة. ستكون الخيوط (the threads) المتبقية في المجمع متاحة لمعالجة أي مهام أخرى تأتي بينما يعالج الخيط (the thread) الأول. عندما ينتهي الخيط (the thread) الأول من معالجة مهمته، يتم إرجاعه إلى مجمع الخيوط (threads) الخاملة، جاهزًا لمعالجة مهمة جديدة. يتيح لك مجمع خيوط (thread pool) معالجة الاتصالات بشكل متزامن (concurrently)، مما يزيد من إنتاجية خادومك (your server).
+_مجمع خيوط_ (_thread pool_) هو مجموعة من الخيوط (of threads) المولدة (spawned) التي هي جاهزة وتنتظر معالجة مهمة. عندما يتلقى البرنامج مهمة جديدة، فإنه يعيّن أحد الخيوط (the threads) في المجمع إلى المهمة، وسيعالج هذا الخيط (thread) المهمة. ستكون الخيوط المتبقية في المجمع متاحة لمعالجة أي مهام أخرى تأتي بينما يعالج الخيط (the thread) الأول. عندما ينتهي الخيط الأول من معالجة مهمته، يتم إرجاعه إلى مجمع الخيوط (threads) الخاملة، جاهزًا لمعالجة مهمة جديدة. يتيح لك مجمع خيوط (thread pool) معالجة الاتصالات بشكل متزامن (concurrently)، مما يزيد من إنتاجية خادومك (your server).
 
-سنحد من عدد الخيوط (threads) في المجمع إلى عدد صغير لحمايتنا من هجمات DoS؛ إذا كان برنامجنا ينشئ خيطًا (thread) جديدًا لكل طلب (request) عند وصوله، فإن شخصًا يقدم 10 ملايين طلب (requests) إلى خادومنا (to our server) يمكن أن يحدث فوضى عن طريق استنفاد جميع موارد (the resources of) خادومنا (our server) ووقف معالجة الطلبات (requests) إلى حد.
+سنحد من عدد الخيوط (threads) في المجمع إلى عدد صغير لحمايتنا من هجمات DoS؛ إذا كان برنامجنا ينشئ خيطًا (thread) جديدًا لكل طلب (request) عند وصوله، فإن شخصًا يقدم 10 ملايين طلب (requests) إلى خادومنا (to our server) يمكن أن يحدث فوضى عن طريق استنفاد جميع موارد (the resources of) خادومنا (our server) ووقف معالجة الطلبات إلى حد.
 
-بدلاً من توليد (spawning) خيوط (threads) غير محدودة، إذن، سيكون لدينا عدد ثابت من الخيوط (of threads) في انتظار في المجمع. يتم إرسال الطلبات (requests) التي تأتي إلى المجمع للمعالجة. سيحتفظ المجمع بطابور (a queue) من الطلبات (of requests) الواردة. سيستخرج كل من الخيوط (of the threads) في المجمع طلبًا (a request) من هذا الطابور (queue)، ويعالج الطلب (the request)، ثم يطلب من الطابور (the queue for) طلبًا (request) آخر. مع هذا التصميم، يمكننا معالجة ما يصل إلى _`N`_ طلبًا (requests) بشكل متزامن (concurrently)، حيث _`N`_ هو عدد الخيوط (threads). إذا كان كل خيط (thread) يستجيب لطلب طويل التشغيل (long-running request)، فلا يزال بإمكان الطلبات (requests) اللاحقة أن تتراكم في الطابور (in the queue)، لكننا زدنا عدد الطلبات (requests) طويلة التشغيل التي يمكننا معالجتها قبل الوصول إلى تلك النقطة.
+بدلاً من توليد (spawning) خيوط (threads) غير محدودة، إذن، سيكون لدينا عدد ثابت من الخيوط (of threads) في انتظار في المجمع. يتم إرسال الطلبات (requests) التي تأتي إلى المجمع للمعالجة. سيحتفظ المجمع بطابور (a queue) من الطلبات (of requests) الواردة. سيستخرج كل من الخيوط (of the threads) في المجمع طلبًا (a request) من هذا الطابور (queue)، ويعالج الطلب (the request)، ثم يطلب من الطابور (the queue for) طلبًا (request) آخر. مع هذا التصميم، يمكننا معالجة ما يصل إلى _`N`_ طلبًا بشكل متزامن (concurrently)، حيث _`N`_ هو عدد الخيوط. إذا كان كل خيط (thread) يستجيب لطلب طويل التشغيل (long-running request)، فلا يزال بإمكان الطلبات اللاحقة أن تتراكم في الطابور (in the queue)، لكننا زدنا عدد الطلبات طويلة التشغيل التي يمكننا معالجتها قبل الوصول إلى تلك النقطة.
 
 هذه التقنية هي واحدة فقط من طرق عديدة لتحسين إنتاجية خادوم ويب (a web server). الخيارات الأخرى التي قد تستكشفها هي نموذج fork/join (fork/join model)، ونموذج async I/O أحادي الخيط (single-threaded async I/O model)، ونموذج async I/O متعدد الخيوط (multithreaded async I/O model). إذا كنت مهتمًا بهذا الموضوع، يمكنك قراءة المزيد عن الحلول الأخرى ومحاولة تنفيذها (implement them)؛ مع لغة منخفضة المستوى مثل Rust، كل هذه الخيارات ممكنة.
 
-قبل أن نبدأ في تنفيذ (implementing) مجمع خيوط (a thread pool)، دعونا نتحدث عن ما يجب أن يبدو عليه استخدام المجمع. عندما تحاول تصميم الكود، يمكن أن تساعد كتابة واجهة العميل أولاً في توجيه تصميمك. اكتب API للكود بحيث يكون منظمًا بالطريقة التي تريد استدعاءه بها؛ ثم نفذ الوظيفة (the functionality) ضمن تلك البنية (structure) بدلاً من تنفيذ (implementing) الوظيفة (the functionality) ثم تصميم واجهة API العامة.
+قبل أن نبدأ في تنفيذ (implementing) مجمع خيوط (a thread pool)، دعونا نتحدث عن ما يجب أن يبدو عليه استخدام المجمع. عندما تحاول تصميم الكود، يمكن أن تساعد كتابة واجهة العميل أولاً في توجيه تصميمك. اكتب API للكود بحيث يكون منظمًا بالطريقة التي تريد استدعاءه بها؛ ثم نفذ الوظيفة (the functionality) ضمن تلك البنية (structure) بدلاً من تنفيذ الوظيفة ثم تصميم واجهة API العامة.
 
 مشابهًا لكيفية استخدامنا للتطوير المُوجَّه بالاختبار (test-driven development) في المشروع في الفصل 12، سنستخدم التطوير المُوجَّه بالمصرِّف (compiler-driven development) هنا. سنكتب الكود الذي يستدعي الدوال (the functions) التي نريدها، ثم سننظر في الأخطاء من المصرِّف (from the compiler) لنحدد ما يجب أن نغيره بعد ذلك للحصول على الكود ليعمل. قبل أن نفعل ذلك، سنستكشف التقنية التي لن نستخدمها (we're not going to use) كنقطة بداية.
 
@@ -99,7 +99,7 @@ _مجمع خيوط_ (_thread pool_) هو مجموعة من الخيوط (of thre
 {{#include ../listings/ch21-web-server/listing-21-12/output.txt}}
 ```
 
-عظيم! يخبرنا هذا الخطأ أننا نحتاج إلى نوع (type) أو وحدة (or module) `ThreadPool`، لذا سنبني واحدًا الآن. سيكون تطبيق (the implementation of) `ThreadPool` الخاص بنا مستقلاً عن نوع العمل الذي يقوم به خادوم الويب (our web server) الخاص بنا. لذا، لنحوّل (let's switch) حزمة (the crate) `hello` من حزمة ثنائية (binary crate) إلى حزمة مكتبة (library crate) لحمل تطبيق (the implementation of) `ThreadPool` الخاص بنا. بعد أن نغيّر إلى حزمة مكتبة (library crate)، يمكننا أيضًا استخدام مكتبة مجمع الخيوط (thread pool library) المنفصلة لأي عمل نريد القيام به باستخدام مجمع خيوط (a thread pool)، وليس فقط لخدمة طلبات (requests) الويب.
+عظيم! يخبرنا هذا الخطأ أننا نحتاج إلى نوع (type) أو وحدة (or module) `ThreadPool`، لذا سنبني واحدًا الآن. سيكون تطبيق (the implementation of) `ThreadPool` الخاص بنا مستقلاً عن نوع العمل الذي يقوم به خادوم الويب (our web server) الخاص بنا. لذا، لنحوّل (let's switch) حزمة (the crate) `hello` من حزمة ثنائية (binary crate) إلى حزمة مكتبة (library crate) لحمل تطبيق `ThreadPool` الخاص بنا. بعد أن نغيّر إلى حزمة مكتبة، يمكننا أيضًا استخدام مكتبة مجمع الخيوط (thread pool library) المنفصلة لأي عمل نريد القيام به باستخدام مجمع خيوط (a thread pool)، وليس فقط لخدمة طلبات (requests) الويب.
 
 أنشئ ملفًا _src/lib.rs_ يحتوي على الآتي، وهو أبسط تعريف لبنية `ThreadPool` (struct) يمكننا أن نمتلكه الآن:
 
@@ -127,7 +127,7 @@ _مجمع خيوط_ (_thread pool_) هو مجموعة من الخيوط (of thre
 {{#include ../listings/ch21-web-server/no-listing-01-define-threadpool-struct/output.txt}}
 ```
 
-يشير هذا الخطأ أننا نحتاج بعد ذلك إلى إنشاء دالة (function) مرتبطة باسم `new` لـ `ThreadPool`. نعلم أيضًا أن `new` يجب أن يكون لها معامل (parameter) واحد يمكن أن يقبل `4` كوسيطة ويجب أن تُرجع نسخة من `ThreadPool`. لنطبق أبسط دالة (function) `new` ستكون لها تلك الخصائص:
+يشير هذا الخطأ أننا نحتاج بعد ذلك إلى إنشاء دالة (function) مرتبطة باسم `new` لـ `ThreadPool`. نعلم أيضًا أن `new` يجب أن يكون لها معامل (parameter) واحد يمكن أن يقبل `4` كوسيطة ويجب أن تُرجع نسخة من `ThreadPool`. لنطبق أبسط دالة `new` ستكون لها تلك الخصائص:
 
 <Listing file-name="src/lib.rs">
 
@@ -137,7 +137,7 @@ _مجمع خيوط_ (_thread pool_) هو مجموعة من الخيوط (of thre
 
 </Listing>
 
-اخترنا `usize` كنوع (as the type) لمعامل (for the parameter) `size` لأننا نعلم أن عددًا سالبًا من الخيوط (of threads) لا يكون لا معنى له. نعلم أيضًا أننا سنستخدم (will use) هذا `4` كعدد من العناصر في مجموعة من الخيوط (of threads)، وهو ما يُستخدم (is used) له نوع (type) `usize`، كما تمت مناقشته في قسم ["Integer Types"][integer-types]<!--
+اخترنا `usize` كنوع (as the type) لمعامل (for the parameter) `size` لأننا نعلم أن عددًا سالبًا من الخيوط (of threads) لا يكون لا معنى له. نعلم أيضًا أننا سنستخدم (will use) هذا `4` كعدد من العناصر في مجموعة من الخيوط، وهو ما يُستخدم (is used) له نوع (type) `usize`، كما تمت مناقشته في قسم ["Integer Types"][integer-types]<!--
 ignore --> في الفصل 3.
 
 لنتحقق من الكود مرة أخرى:
@@ -159,7 +159,7 @@ pub fn spawn<F, T>(f: F) -> JoinHandle<T>
         T: Send + 'static,
 ```
 
-معامل (parameter) النوع (type) `F` هو الذي نهتم به هنا؛ معامل (the parameter) النوع (type) `T` متعلق بالقيمة المُرجعة، ولسنا مهتمين بذلك. يمكننا أن نرى أن `spawn` يستخدم `FnOnce` كقيد (as the trait bound) السمة (trait) على `F`. هذا ربما ما نريده أيضًا، لأننا (because we'll) سنمرر في النهاية الوسيطة التي نحصل عليها في `execute` إلى `spawn`. يمكننا أن نكون واثقين أكثر أن `FnOnce` هي السمة (the trait) التي نريد استخدامها لأن الخيط (the thread) لتشغيل طلب (a request) سيُنفّذ فقط إغلاق (the closure of) ذلك الطلب (request) مرة واحدة، وهو ما يطابق (matches) `Once` في `FnOnce`.
+معامل (parameter) النوع (type) `F` هو الذي نهتم به هنا؛ معامل (the parameter) النوع `T` متعلق بالقيمة المُرجعة، ولسنا مهتمين بذلك. يمكننا أن نرى أن `spawn` يستخدم `FnOnce` كقيد (as the trait bound) السمة (trait) على `F`. هذا ربما ما نريده أيضًا، لأننا (because we'll) سنمرر في النهاية الوسيطة التي نحصل عليها في `execute` إلى `spawn`. يمكننا أن نكون واثقين أكثر أن `FnOnce` هي السمة (the trait) التي نريد استخدامها لأن الخيط (the thread) لتشغيل طلب (a request) سيُنفّذ فقط إغلاق (the closure of) ذلك الطلب (request) مرة واحدة، وهو ما يطابق (matches) `Once` في `FnOnce`.
 
 معامل النوع (type parameter) `F` لديه أيضًا قيد (bound) السمة (trait) `Send` وقيد العمر (lifetime bound) `'static`، والتي مفيدة (useful) في موقفنا: نحتاج `Send` لنقل الإغلاق (the closure) من خيط واحد (thread) إلى آخر و `'static` لأننا لا نعرف كم سيستغرق الخيط (the thread) للتنفيذ (to execute). لننشئ طريقة `execute` (method) على `ThreadPool` ستأخذ معاملاً (parameter) عامًا (generic) من نوع (of type) `F` مع هذه القيود (bounds):
 
@@ -171,7 +171,7 @@ pub fn spawn<F, T>(f: F) -> JoinHandle<T>
 
 </Listing>
 
-ما زلنا نستخدم `()` بعد `FnOnce` لأن هذا `FnOnce` يمثل إغلاقًا (closure) لا يأخذ معاملات (parameters) ويُرجع نوع الوحدة (unit type) `()`. مثل تعريفات الدوال (functions)، يمكن حذف نوع (the return type) الإرجاع من التوقيع، لكن حتى لو لم يكن لدينا معاملات (parameters)، ما زلنا نحتاج إلى الأقواس.
+ما زلنا نستخدم `()` بعد `FnOnce` لأن هذا `FnOnce` يمثل إغلاقًا (closure) لا يأخذ معاملات (parameters) ويُرجع نوع الوحدة (unit type) `()`. مثل تعريفات الدوال (functions)، يمكن حذف نوع (the return type) الإرجاع من التوقيع، لكن حتى لو لم يكن لدينا معاملات، ما زلنا نحتاج إلى الأقواس.
 
 مرة أخرى، هذا هو أبسط تطبيق (implementation) لطريقة (of the method) `execute`: لا تفعل شيئًا، لكن نحن فقط نحاول جعل كودنا يُترجم. لنتحقق منه مرة أخرى:
 
@@ -187,7 +187,7 @@ pub fn spawn<F, T>(f: F) -> JoinHandle<T>
 
 #### التحقق من عدد الخيوط في `new` (Validating the Number of Threads in `new`)
 
-نحن لا نفعل أي شيء بالمعاملات (with the parameters) لـ `new` و `execute`. لننفّذ أجسام هذه الدوال (functions) بالسلوك الذي نريده. للبدء، لنفكّر (let's think) في `new`. اخترنا سابقًا نوعًا (type) غير موقّع لمعامل (for the parameter) `size` لأن مجمعًا بعدد سالب من الخيوط (of threads) لا يكون منطقيًا. ومع ذلك، مجمع بصفر خيوط (threads) أيضًا لا يكون منطقيًا، ومع ذلك الصفر هو `usize` صالح تمامًا. سنضيف كودًا للتحقق من أن `size` أكبر من صفر قبل أن نُرجع نسخة `ThreadPool`، وسنجعل البرنامج يصاب (panic) بالذعر (panic) إذا تلقى صفرًا باستخدام ماكرو (the macro) `assert!`، كما موضح في القائمة 21-13.
+نحن لا نفعل أي شيء بالمعاملات (with the parameters) لـ `new` و `execute`. لننفّذ أجسام هذه الدوال (functions) بالسلوك الذي نريده. للبدء، لنفكّر (let's think) في `new`. اخترنا سابقًا نوعًا (type) غير موقّع لمعامل (for the parameter) `size` لأن مجمعًا بعدد سالب من الخيوط (of threads) لا يكون منطقيًا. ومع ذلك، مجمع بصفر خيوط (threads) أيضًا لا يكون منطقيًا، ومع ذلك الصفر هو `usize` صالح تمامًا. سنضيف كودًا للتحقق من أن `size` أكبر من صفر قبل أن نُرجع نسخة `ThreadPool`، وسنجعل البرنامج يصاب (panic) بالذعر إذا تلقى صفرًا باستخدام ماكرو (the macro) `assert!`، كما موضح في القائمة 21-13.
 
 <Listing number="21-13" file-name="src/lib.rs" caption="تطبيق `ThreadPool::new` للذعر إذا كان `size` صفرًا (Implementing `ThreadPool::new` to panic if `size` is zero)">
 
@@ -197,7 +197,7 @@ pub fn spawn<F, T>(f: F) -> JoinHandle<T>
 
 </Listing>
 
-أضفنا أيضًا بعض التوثيق لـ `ThreadPool` مع تعليقات التوثيق. لاحظ أننا اتبعنا ممارسات التوثيق الجيدة بإضافة قسم يستدعي المواقف التي يمكن أن تصاب (panic) فيها دالتنا (our function) بالذعر (panic)، كما تمت مناقشته في الفصل 14. حاول تشغيل `cargo doc --open` والنقر على بنية `ThreadPool` (struct) لترى ما يبدو التوثيق المُنشأ لـ `new`!
+أضفنا أيضًا بعض التوثيق لـ `ThreadPool` مع تعليقات التوثيق. لاحظ أننا اتبعنا ممارسات التوثيق الجيدة بإضافة قسم يستدعي المواقف التي يمكن أن تصاب (panic) فيها دالتنا (our function) بالذعر، كما تمت مناقشته في الفصل 14. حاول تشغيل `cargo doc --open` والنقر على بنية `ThreadPool` (struct) لترى ما يبدو التوثيق المُنشأ لـ `new`!
 
 بدلاً من إضافة ماكرو (the macro) `assert!` كما فعلنا هنا، يمكننا تغيير `new` إلى `build` وإرجاع `Result` كما فعلنا مع `Config::build` في مشروع I/O في القائمة 12-9. لكن قررنا في هذه الحالة أن محاولة إنشاء مجمع خيوط (a thread pool) بدون أي خيوط (threads) يجب أن يكون خطأً غير قابل للاسترداد. إذا كنت طموحًا، حاول كتابة دالة (a function) باسم `build` مع التوقيع التالي للمقارنة مع دالة (the function) `new`:
 
@@ -231,7 +231,7 @@ pub fn spawn<F, T>(f: F) -> JoinHandle<T>
 
 جلبنا `std::thread` إلى النطاق (into scope) في حزمة المكتبة (library crate) لأننا (because we're) نستخدم `thread::JoinHandle` كنوع (as the type of) العناصر في المتجه (in the vector) في `ThreadPool`.
 
-بمجرد استقبال حجم صالح، ينشئ `ThreadPool` الخاص بنا متجهًا (vector) جديدًا يمكن أن يحمل عناصر `size`. تؤدي دالة (the function) `with_capacity` نفس المهمة مثل `Vec::new` لكن مع فرق مهم: تُخصّص مسبقًا مساحة في المتجه (in the vector). لأننا نعلم أننا نحتاج إلى تخزين عناصر `size` في المتجه (in the vector)، فإن القيام بهذا التخصيص (allocation) مقدمًا أكثر كفاءة قليلاً من استخدام `Vec::new`، الذي يغيّر نفسه بينما يتم إدراج العناصر.
+بمجرد استقبال حجم صالح، ينشئ `ThreadPool` الخاص بنا متجهًا (vector) جديدًا يمكن أن يحمل عناصر `size`. تؤدي دالة (the function) `with_capacity` نفس المهمة مثل `Vec::new` لكن مع فرق مهم: تُخصّص مسبقًا مساحة في المتجه (in the vector). لأننا نعلم أننا نحتاج إلى تخزين عناصر `size` في المتجه، فإن القيام بهذا التخصيص (allocation) مقدمًا أكثر كفاءة قليلاً من استخدام `Vec::new`، الذي يغيّر نفسه بينما يتم إدراج العناصر.
 
 عندما تُشغّل `cargo check` مرة أخرى، يجب أن ينجح.
 
@@ -241,9 +241,9 @@ pub fn spawn<F, T>(f: F) -> JoinHandle<T>
 
 #### إرسال الكود من `ThreadPool` إلى خيط (Sending Code from the `ThreadPool` to a Thread)
 
-تركنا تعليقًا في حلقة `for` (loop) في القائمة 21-14 بخصوص إنشاء الخيوط (the threads). هنا، سننظر في كيفية نُنشئ فعلاً الخيوط (the threads). توفر المكتبة القياسية (the standard library) `thread::spawn` كطريقة لإنشاء خيوط (threads)، و `thread::spawn` تتوقع أن تحصل على بعض الكود الذي يجب أن يُشغّله الخيط (the thread) بمجرد إنشاء الخيط (the thread). ومع ذلك، في حالتنا، نريد إنشاء الخيوط (the threads) وجعلها تنتظر (_wait_) للكود الذي سنرسله (we'll send) لاحقًا. لا تتضمن تطبيق (the implementation of) المكتبة القياسية (the standard library) للخيوط (for threads) أي طريقة للقيام بذلك؛ علينا أن ننفّذه (implement it) يدويًا.
+تركنا تعليقًا في حلقة `for` (loop) في القائمة 21-14 بخصوص إنشاء الخيوط (the threads). هنا، سننظر في كيفية نُنشئ فعلاً الخيوط. توفر المكتبة القياسية (the standard library) `thread::spawn` كطريقة لإنشاء خيوط (threads)، و `thread::spawn` تتوقع أن تحصل على بعض الكود الذي يجب أن يُشغّله الخيط (the thread) بمجرد إنشاء الخيط. ومع ذلك، في حالتنا، نريد إنشاء الخيوط وجعلها تنتظر (_wait_) للكود الذي سنرسله (we'll send) لاحقًا. لا تتضمن تطبيق (the implementation of) المكتبة القياسية للخيوط (for threads) أي طريقة للقيام بذلك؛ علينا أن ننفّذه (implement it) يدويًا.
 
-سننفّذ هذا السلوك بإدخال بنية (data structure) بيانات جديدة بين `ThreadPool` والخيوط (and the threads) التي ستدير هذا السلوك الجديد. سنسمّي بنية (data structure) البيانات هذه _Worker_ (Worker)، وهو مصطلح شائع في تطبيقات (in implementations) الترجمة (pooling). يلتقط `Worker` الكود الذي يحتاج إلى التشغيل ويُشغّل الكود في خيطه (in its thread).
+سننفّذ هذا السلوك بإدخال بنية (data structure) بيانات جديدة بين `ThreadPool` والخيوط (and the threads) التي ستدير هذا السلوك الجديد. سنسمّي بنية البيانات هذه _Worker_ (Worker)، وهو مصطلح شائع في تطبيقات (in implementations) الترجمة (pooling). يلتقط `Worker` الكود الذي يحتاج إلى التشغيل ويُشغّل الكود في خيطه (in its thread).
 
 فكّر في الناس العاملين في المطبخ في مطعم: ينتظر العمّال (the workers) حتى تأتي الطلبات من العملاء، ثم هم مسؤولون عن أخذ تلك الطلبات وملئها.
 
@@ -270,9 +270,9 @@ pub fn spawn<F, T>(f: F) -> JoinHandle<T>
 
 غيّرنا اسم الحقل على `ThreadPool` من `threads` إلى `workers` لأنه (because it's) الآن يحمل نسخ `Worker` بدلاً من نسخ `JoinHandle<()>`. نستخدم العداد في حلقة `for` (loop) كوسيطة لـ `Worker::new`، ونُخزّن كل `Worker` جديد في المتجه (in the vector) المسمّى `workers`.
 
-لا الكود الخارجي (مثل خادومنا (our server) في _src/main.rs_) أن يعرف تفاصيل التطبيق (the implementation) المتعلقة باستخدام بنية (struct) `Worker` ضمن `ThreadPool`، لذا نجعل بنية `Worker` (struct) ودالتها (and its function) `new` خاصة. تستخدم دالة (the function) `Worker::new` المعرّف `id` الذي نعطيه وتُخزّن نسخة `JoinHandle<()>` التي يتم إنشاؤها بتوليد (by spawning) خيط (thread) جديد باستخدام إغلاق (closure) فارغ.
+لا الكود الخارجي (مثل خادومنا (our server) في _src/main.rs_) أن يعرف تفاصيل التطبيق (the implementation) المتعلقة باستخدام بنية (struct) `Worker` ضمن `ThreadPool`، لذا نجعل بنية `Worker` ودالتها (and its function) `new` خاصة. تستخدم دالة (the function) `Worker::new` المعرّف `id` الذي نعطيه وتُخزّن نسخة `JoinHandle<()>` التي يتم إنشاؤها بتوليد (by spawning) خيط (thread) جديد باستخدام إغلاق (closure) فارغ.
 
-> ملاحظة: إذا لم يتمكن نظام التشغيل من إنشاء خيط (a thread) لأنه ليست هناك موارد (resources) نظام كافية، فسيصاب (will panic) `thread::spawn` بالذعر (panic). هذا سيتسبب في إصابة (panic) خادومنا (our server) بالكامل بالذعر (to panic)، حتى على الرغم من أن إنشاء بعض الخيوط (threads) قد ينجح. من أجل بساطة الأمر (simplicity's sake)، هذا السلوك جيد، لكن في تطبيق مجمع خيوط (thread pool) إنتاجي (production implementation)، من المحتمل أن ترغب في استخدام
+> ملاحظة: إذا لم يتمكن نظام التشغيل من إنشاء خيط (a thread) لأنه ليست هناك موارد (resources) نظام كافية، فسيصاب (will panic) `thread::spawn` بالذعر (panic). هذا سيتسبب في إصابة خادومنا (our server) بالكامل بالذعر (to panic)، حتى على الرغم من أن إنشاء بعض الخيوط (threads) قد ينجح. من أجل بساطة الأمر (simplicity's sake)، هذا السلوك جيد، لكن في تطبيق مجمع خيوط (thread pool) إنتاجي (production implementation)، من المحتمل أن ترغب في استخدام
 > [`std::thread::Builder`][builder]<!-- ignore --> وطريقته (and its method)
 > [`spawn`][builder-spawn]<!-- ignore --> التي تُرجع `Result` بدلاً.
 
@@ -304,7 +304,7 @@ pub fn spawn<F, T>(f: F) -> JoinHandle<T>
 
 في `ThreadPool::new`، ننشئ قناتنا (our channel) الجديدة ونجعل المجمع يحتفظ بالمُرسِل (the sender). سيُترجم هذا بنجاح.
 
-لنحاول تمرير مُستقبِل (the receiver of) القناة (the channel) إلى كل `Worker` بينما ينشئ مجمع الخيوط (the thread pool) القناة (the channel). نعلم أننا نريد استخدام المُستقبِل (the receiver) في الخيط (in the thread) الذي تولّده (spawn) نسخ `Worker`، لذا سنُشير (we'll reference) إلى معامل (to the parameter) `receiver` في الإغلاق (in the closure). لن يُترجم الكود في القائمة 21-17 تمامًا بعد.
+لنحاول تمرير مُستقبِل (the receiver of) القناة (the channel) إلى كل `Worker` بينما ينشئ مجمع الخيوط (the thread pool) القناة. نعلم أننا نريد استخدام المُستقبِل (the receiver) في الخيط (in the thread) الذي تولّده (spawn) نسخ `Worker`، لذا سنُشير (we'll reference) إلى معامل (to the parameter) `receiver` في الإغلاق (in the closure). لن يُترجم الكود في القائمة 21-17 تمامًا بعد.
 
 <Listing number="21-17" file-name="src/lib.rs" caption="تمرير مُستقبِل القناة إلى العمّال (Passing the receiver of the channel to the workers)">
 
@@ -336,14 +336,14 @@ pub fn spawn<F, T>(f: F) -> JoinHandle<T>
 
 </Listing>
 
-في `ThreadPool::new`، نضع المُستقبِل (the receiver) في `Arc` و `Mutex`. لكل `Worker` جديد، نستنسخ `Arc` لزيادة عداد المراجع (the reference) بحيث تتمكن نسخ `Worker` من مشاركة ملكية (ownership of) المُستقبِل (the receiver).
+في `ThreadPool::new`، نضع المُستقبِل (the receiver) في `Arc` و `Mutex`. لكل `Worker` جديد، نستنسخ `Arc` لزيادة عداد المراجع (the reference) بحيث تتمكن نسخ `Worker` من مشاركة ملكية (ownership of) المُستقبِل.
 
 مع هذه التغييرات، يُترجم الكود! نحن هناك!
 
 #### تطبيق طريقة `execute` (Implementing the `execute` Method)
 
 لننفّذ أخيرًا طريقة (the method) `execute` على `ThreadPool`. سنغيّر أيضًا `Job` من بنية (from a struct) إلى اسم مستعار (type alias) للنوع (type) لكائن (for a trait object) سمة (trait) يحمل نوع (the type of) الإغلاق (the closure) الذي يتلقّاه `execute`. كما تمت مناقشته في قسم ["Type Synonyms and Type
-Aliases"][type-aliases]<!-- ignore --> في الفصل 20، تسمح لنا أسماء (type aliases) الأنواع المستعارة (type) بجعل الأنواع (types) الطويلة أقصر من أجل سهولة الاستخدام. انظر إلى القائمة 21-19.
+Aliases"][type-aliases]<!-- ignore --> في الفصل 20، تسمح لنا أسماء (type aliases) الأنواع المستعارة بجعل الأنواع (types) الطويلة أقصر من أجل سهولة الاستخدام. انظر إلى القائمة 21-19.
 
 <Listing number="21-19" file-name="src/lib.rs" caption="إنشاء اسم مستعار `Job` للنوع لـ `Box` يحمل كل إغلاق ثم إرسال الوظيفة أسفل القناة (Creating a `Job` type alias for a `Box` that holds each closure and then sending the job down the channel)">
 
@@ -353,9 +353,9 @@ Aliases"][type-aliases]<!-- ignore --> في الفصل 20، تسمح لنا أس
 
 </Listing>
 
-بعد إنشاء نسخة `Job` جديدة باستخدام الإغلاق (the closure) الذي نحصل عليه في `execute`، نُرسل (we send) تلك الوظيفة (job) أسفل نهاية الإرسال (sending) من القناة (of the channel). نستدعي `unwrap` على `send` لحالة فشل (the sending fails) الإرسال (sending). قد يحدث هذا إذا، على سبيل المثال، أوقفنا جميع خيوطنا (our threads) من التنفيذ، مما يعني أن النهاية المُستقبِلة توقّفت عن استقبال رسائل جديدة. في الوقت الحالي، لا يمكننا إيقاف خيوطنا (our threads) من التنفيذ: تستمر خيوطنا (our threads) في التنفيذ طالما يوجد المجمع. السبب الذي نستخدم فيه `unwrap` هو أننا نعلم أن حالة الفشل لن تحدث، لكن المصرِّف (the compiler) لا يعرف ذلك.
+بعد إنشاء نسخة `Job` جديدة باستخدام الإغلاق (the closure) الذي نحصل عليه في `execute`، نُرسل (we send) تلك الوظيفة (job) أسفل نهاية الإرسال (sending) من القناة (of the channel). نستدعي `unwrap` على `send` لحالة فشل (the sending fails) الإرسال. قد يحدث هذا إذا، على سبيل المثال، أوقفنا جميع خيوطنا (our threads) من التنفيذ، مما يعني أن النهاية المُستقبِلة توقّفت عن استقبال رسائل جديدة. في الوقت الحالي، لا يمكننا إيقاف خيوطنا من التنفيذ: تستمر خيوطنا في التنفيذ طالما يوجد المجمع. السبب الذي نستخدم فيه `unwrap` هو أننا نعلم أن حالة الفشل لن تحدث، لكن المصرِّف (the compiler) لا يعرف ذلك.
 
-لكن لسنا بعد! في `Worker`، إغلاقنا (our closure) المُمرّر إلى `thread::spawn` ما زال فقط يشير (_references_) إلى النهاية المُستقبِلة من القناة (of the channel). بدلاً، نحتاج الإغلاق (the closure) ليُكرّر (to loop) للأبد، يسأل النهاية المُستقبِلة من القناة (of the channel) عن وظيفة (for a job) ويُشغّل الوظيفة (the job) عندما يحصل على واحدة. لنعمل (let's make) التغيير الموضّح في القائمة 21-20 إلى `Worker::new`.
+لكن لسنا بعد! في `Worker`، إغلاقنا (our closure) المُمرّر إلى `thread::spawn` ما زال فقط يشير (_references_) إلى النهاية المُستقبِلة من القناة (of the channel). بدلاً، نحتاج الإغلاق (the closure) ليُكرّر (to loop) للأبد، يسأل النهاية المُستقبِلة من القناة عن وظيفة (for a job) ويُشغّل الوظيفة (the job) عندما يحصل على واحدة. لنعمل (let's make) التغيير الموضّح في القائمة 21-20 إلى `Worker::new`.
 
 <Listing number="21-20" file-name="src/lib.rs" caption="استقبال وتنفيذ الوظائف في خيط نسخة `Worker` (Receiving and executing the jobs in the `Worker` instance's thread)">
 
@@ -365,11 +365,11 @@ Aliases"][type-aliases]<!-- ignore --> في الفصل 20، تسمح لنا أس
 
 </Listing>
 
-هنا، نستدعي أولاً `lock` على `receiver` للحصول على القفل (the mutex)، ثم نستدعي `unwrap` للذعر (to panic) على أي أخطاء. قد يفشل الحصول على القفل (a lock) إذا كان المقفل (the mutex) في حالة مُسمّمة (_poisoned_ state)، والتي يمكن أن تحدث إذا أصاب (panicked) خيط (some other thread) آخر بالذعر (panicked) أثناء حمل القفل (the lock) بدلاً من إطلاق القفل (the lock). في هذه الحالة، فإن استدعاء `unwrap` لجعل هذا الخيط (thread) يصاب (panic) بالذعر (panic) هو الإجراء الصحيح ليُتّخذ. لا تتردد في تغيير هذا `unwrap` إلى `expect` مع رسالة خطأ ذات معنى لك.
+هنا، نستدعي أولاً `lock` على `receiver` للحصول على القفل (the mutex)، ثم نستدعي `unwrap` للذعر (to panic) على أي أخطاء. قد يفشل الحصول على القفل (a lock) إذا كان المقفل في حالة مُسمّمة (_poisoned_ state)، والتي يمكن أن تحدث إذا أصاب (panicked) خيط (some other thread) آخر بالذعر أثناء حمل القفل (the lock) بدلاً من إطلاق القفل. في هذه الحالة، فإن استدعاء `unwrap` لجعل هذا الخيط (thread) يصاب (panic) بالذعر هو الإجراء الصحيح ليُتّخذ. لا تتردد في تغيير هذا `unwrap` إلى `expect` مع رسالة خطأ ذات معنى لك.
 
 إذا حصلنا على القفل (the lock) على المقفل (on the mutex)، نستدعي `recv` لاستقبال `Job` من القناة (from the channel). يتحرّك `unwrap` نهائي عبر أي أخطاء هنا أيضًا، والتي قد تحدث إذا أوقف الخيط (the thread) الذي يحمل المُرسِل (the sender)، مشابهًا لكيفية إرجاع طريقة (the method) `send` `Err` إذا أوقف المُستقبِل (the receiver).
 
-يحجب (blocks) استدعاء `recv`، لذا إذا لم يكن هناك وظيفة (a job) بعد، فسينتظر الخيط (the thread) الحالي حتى تصبح وظيفة (a job) متاحة. يضمن `Mutex<T>` أن خيط (thread) `Worker` واحدًا فقط في كل مرة يحاول طلب (to request) وظيفة (a job).
+يحجب (blocks) استدعاء `recv`، لذا إذا لم يكن هناك وظيفة (a job) بعد، فسينتظر الخيط (the thread) الحالي حتى تصبح وظيفة متاحة. يضمن `Mutex<T>` أن خيط (thread) `Worker` واحدًا فقط في كل مرة يحاول طلب (to request) وظيفة.
 
 مجمع خيوطنا (our thread pool) الآن في حالة عمل! أعطه `cargo run` واعمل بعض الطلبات (requests):
 
@@ -418,7 +418,7 @@ Worker 0 got a job; executing.
 Worker 2 got a job; executing.
 ```
 
-نجاح! الآن لدينا مجمع خيوط (a thread pool) ينفّذ (that executes) الاتصالات بشكل غير متزامن (asynchronously). لا يتم أبدًا إنشاء أكثر من أربعة خيوط (threads)، لذا لن يحصل نظامنا على حمل زائد إذا تلقّى الخادوم (the server) الكثير من الطلبات (of requests). إذا قدّمنا طلبًا (a request) إلى _/sleep_، فسيتمكّن الخادوم (the server) من خدمة طلبات (requests) أخرى عن طريق جعل خيط (thread) آخر يُشغّلها.
+نجاح! الآن لدينا مجمع خيوط (a thread pool) ينفّذ (that executes) الاتصالات بشكل غير متزامن (asynchronously). لا يتم أبدًا إنشاء أكثر من أربعة خيوط (threads)، لذا لن يحصل نظامنا على حمل زائد إذا تلقّى الخادوم (the server) الكثير من الطلبات (of requests). إذا قدّمنا طلبًا (a request) إلى _/sleep_، فسيتمكّن الخادوم من خدمة طلبات (requests) أخرى عن طريق جعل خيط (thread) آخر يُشغّلها.
 
 > ملاحظة: إذا فتحت _/sleep_ في نوافذ متصفح متعددة في وقت واحد، فقد يُحمّلون واحدًا تلو الآخر في فترات من خمس ثوانٍ. تُنفّذ (execute) بعض متصفحات الويب نسخًا متعددة من نفس الطلب (request) بشكل تسلسلي لأسباب التخزين المؤقت. هذا القيد ليس تسببه (caused by) خادوم الويب (our web server) الخاص بنا.
 
@@ -434,7 +434,7 @@ Worker 2 got a job; executing.
 
 </Listing>
 
-يُترجم هذا الكود ويعمل لكن لا ينتج عنه سلوك الخيوط (threading) المطلوب: سيتسبّب طلب (request) بطيء لا يزال في انتظار wait الطلبات (requests) الأخرى ليتم معالجتها. السبب مُخادع إلى حد ما: لا تمتلك بنية `Mutex` (struct) طريقة (method) `unlock` عامة (a public) لأن ملكية (the ownership of) القفل (the lock) مبنية على عمر (on the lifetime of) `MutexGuard<T>` ضمن `LockResult<MutexGuard<T>>` الذي تُرجعه طريقة (the method) `lock`. في وقت الترجمة, يمكن للمُدقّق (the borrow checker) فرض (then enforce) القاعدة بأن لا يمكن الوصول إلى مورد (a resource) محمي (guarded) بواسطة `Mutex` ما لم نحمل القفل (the lock). ومع ذلك، يمكن أن ينتج هذا التطبيق (implementation) أيضًا في حمل (the lock being held) القفل (lock) لمدة أطول من المقصود إذا لم نكن حريصين على عمر (of the lifetime of) `MutexGuard<T>`.
+يُترجم هذا الكود ويعمل لكن لا ينتج عنه سلوك الخيوط (threading) المطلوب: سيتسبّب طلب (request) بطيء لا يزال في انتظار wait الطلبات (requests) الأخرى ليتم معالجتها. السبب مُخادع إلى حد ما: لا تمتلك بنية `Mutex` (struct) طريقة (method) `unlock` عامة (a public) لأن ملكية (the ownership of) القفل (the lock) مبنية على عمر (on the lifetime of) `MutexGuard<T>` ضمن `LockResult<MutexGuard<T>>` الذي تُرجعه طريقة (the method) `lock`. في وقت الترجمة, يمكن للمُدقّق (the borrow checker) فرض (then enforce) القاعدة بأن لا يمكن الوصول إلى مورد (a resource) محمي (guarded) بواسطة `Mutex` ما لم نحمل القفل. ومع ذلك، يمكن أن ينتج هذا التطبيق (implementation) أيضًا في حمل (the lock being held) القفل (lock) لمدة أطول من المقصود إذا لم نكن حريصين على عمر (of the lifetime of) `MutexGuard<T>`.
 
 يعمل الكود في القائمة 21-20 الذي يستخدم `let job =
 receiver.lock().unwrap().recv().unwrap();` لأنه مع `let`، يتم إسقاط أي قيم مؤقتة مُستخدمة في التعبير على الجانب الأيمن من علامة المساواة فور عندما ينتهي عبارة `let`. ومع ذلك، `while
